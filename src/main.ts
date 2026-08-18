@@ -100,11 +100,63 @@ function markdownToHtml(value: string): string {
   }
   return output.join('');
 }
+function markdownText(value: string): string { return value.replace(/([\\`*_[\]{}])/g, '\\$1').replace(/</g, '\\<').replace(/>/g, '\\>'); }
+function htmlInline(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return markdownText(node.textContent ?? '');
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+  const element = node as HTMLElement;
+  const content = Array.from(element.childNodes).map(htmlInline).join('');
+  const tag = element.tagName.toLowerCase();
+  if (tag === 'strong' || tag === 'b') return `**${content}**`;
+  if (tag === 'em' || tag === 'i') return `*${content}*`;
+  if (tag === 'del' || tag === 's' || tag === 'strike') return `~~${content}~~`;
+  if (tag === 'code' && element.parentElement?.tagName.toLowerCase() !== 'pre') return `\`${(element.textContent ?? '').replace(/`/g, '\\`')}\``;
+  if (tag === 'br') return '  \n';
+  if (tag === 'a') {
+    const href = element.getAttribute('href') ?? '';
+    const safeHref = /^(?:https?:|mailto:)/i.test(href) ? href : '#';
+    return `[${content || markdownText(href)}](${safeHref})`;
+  }
+  return content;
+}
+function htmlToMarkdown(value: string): string {
+  const document = new DOMParser().parseFromString(value, 'text/html');
+  const blocks: string[] = [];
+  const addBlock = (content: string): void => { const normalized = content.replace(/[ \t]+\n/g, '\n').trim(); if (normalized) blocks.push(normalized); };
+  const list = (element: HTMLElement, ordered: boolean): void => {
+    const items = Array.from(element.children).filter((child) => child.tagName.toLowerCase() === 'li');
+    addBlock(items.map((item, index) => `${ordered ? `${index + 1}.` : '-'} ${htmlInline(item)}`).join('\n'));
+  };
+  const table = (element: HTMLElement): void => {
+    const rows = Array.from(element.querySelectorAll('tr')).map((row) => Array.from(row.children).map((cell) => htmlInline(cell)));
+    if (!rows.length) return;
+    const width = Math.max(...rows.map((row) => row.length));
+    const normalizeRow = (row: string[]): string[] => Array.from({ length: width }, (_, index) => row[index] ?? '');
+    const header = normalizeRow(rows[0]);
+    addBlock(`| ${header.join(' | ')} |\n| ${header.map(() => '---').join(' | ')} |${rows.slice(1).map((row) => `\n| ${normalizeRow(row).join(' | ')} |`).join('')}`);
+  };
+  const visit = (node: Node): void => {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const element = node as HTMLElement;
+    const tag = element.tagName.toLowerCase();
+    if (/^h[1-6]$/.test(tag)) { addBlock(`${'#'.repeat(Number(tag[1]))} ${htmlInline(element)}`); return; }
+    if (tag === 'p' || tag === 'div' || tag === 'section' || tag === 'article' || tag === 'header' || tag === 'footer' || tag === 'main') { addBlock(htmlInline(element)); return; }
+    if (tag === 'pre') { addBlock(`\\` + '``' + `\n${element.textContent ?? ''}\n` + '```'); return; }
+    if (tag === 'ul' || tag === 'ol') { list(element, tag === 'ol'); return; }
+    if (tag === 'blockquote') { addBlock((element.textContent ?? '').trim().split(/\r?\n/).map((line) => `> ${markdownText(line.trim())}`).join('\n')); return; }
+    if (tag === 'hr') { addBlock('---'); return; }
+    if (tag === 'table') { table(element); return; }
+    Array.from(element.children).forEach(visit);
+  };
+  Array.from(document.body.children).forEach(visit);
+  if (!blocks.length) addBlock(htmlInline(document.body));
+  return `${blocks.join('\n\n')}\n`;
+}
 function convertText(text: string, from: InputKind, to: OutputKind): string {
   if (to === 'txt') return from === 'html' ? new DOMParser().parseFromString(text, 'text/html').body.textContent ?? '' : text;
   if (to === 'html') return from === 'md' ? `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><body>${markdownToHtml(text)}</body></html>` : from === 'html' ? text : `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><body><pre>${escape(text)}</pre></body></html>`;
   if (from === 'md') return text;
-  if (from === 'html') return new DOMParser().parseFromString(text, 'text/html').body.innerText || '';
+  if (from === 'html') return htmlToMarkdown(text);
   return text;
 }
 function renderQueue(): void {
