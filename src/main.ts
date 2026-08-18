@@ -24,14 +24,81 @@ function outputExtension(value: OutputKind): string { return value; }
 function setStatus(value: string, active = false): void { statusEl.textContent = value; statusEl.classList.toggle('busy', active); }
 function escape(value: string): string { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; }
 function formatBytes(value: number): string { return value < 1024 ? `${value} B` : `${(value / 1024).toFixed(1)} KB`; }
+function inlineMarkdown(value: string): string {
+  const tokens: string[] = [];
+  const token = (html: string): string => { const index = tokens.push(html) - 1; return `\u0000${index}\u0000`; };
+  let result = escape(value);
+  result = result.replace(/`([^`\n]+)`/g, (_, code: string) => token(`<code>${code}</code>`));
+  result = result.replace(/!?\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, (match: string, label: string, url: string, title?: string) => {
+    if (match.startsWith('!')) return match;
+    const safeUrl = /^(?:https?:|mailto:)/i.test(url) ? url : '#';
+    const titleAttribute = title ? ` title="${title}"` : '';
+    return token(`<a href="${safeUrl}"${titleAttribute}>${label}</a>`);
+  });
+  result = result.replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, strongA: string, strongB: string) => `<strong>${strongA ?? strongB}</strong>`);
+  result = result.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  result = result.replace(/\*([^*\n]+)\*|_([^_\n]+)_/g, (_, emphasisA: string, emphasisB: string) => `<em>${emphasisA ?? emphasisB}</em>`);
+  return result.replace(/\u0000(\d+)\u0000/g, (_, index: string) => tokens[Number(index)]);
+}
+
+function isTableSeparator(line: string): boolean {
+  const cells = line.trim().replace(/^\|\s*/, '').replace(/\s*\|$/, '').split('|');
+  return cells.length > 0 && cells.every((cell) => /^\s*:?-{3,}:?\s*$/.test(cell));
+}
+
+function tableRow(line: string): string[] {
+  return line.trim().replace(/^\|\s*/, '').replace(/\s*\|$/, '').split('|').map((cell) => cell.trim());
+}
+
 function markdownToHtml(value: string): string {
-  return value.split(/\n{2,}/).map((part) => {
-    const line = part.trim();
-    if (line.startsWith('# ')) return `<h1>${escape(line.slice(2))}</h1>`;
-    if (line.startsWith('## ')) return `<h2>${escape(line.slice(3))}</h2>`;
-    if (line.startsWith('### ')) return `<h3>${escape(line.slice(4))}</h3>`;
-    return `<p>${escape(line).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')}</p>`;
-  }).join('');
+  const lines = value.replace(/\r\n?/g, '\n').split('\n');
+  const output: string[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) { index += 1; continue; }
+
+    const fence = line.match(/^\s*```\s*([^ ]*)\s*$/);
+    if (fence) {
+      const language = fence[1] ? ` class="language-${escape(fence[1])}"` : '';
+      const code: string[] = []; index += 1;
+      while (index < lines.length && !/^\s*```\s*$/.test(lines[index])) { code.push(lines[index]); index += 1; }
+      if (index < lines.length) index += 1;
+      output.push(`<pre><code${language}>${escape(code.join('\n'))}</code></pre>`); continue;
+    }
+
+    const heading = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (heading) { const level = heading[1].length; output.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`); index += 1; continue; }
+    if (/^\s{0,3}(?:\*\s*){3,}$/.test(line) || /^\s{0,3}(?:-\s*){3,}$/.test(line) || /^\s{0,3}(?:_\s*){3,}$/.test(line)) { output.push('<hr>'); index += 1; continue; }
+
+    if (index + 1 < lines.length && line.includes('|') && isTableSeparator(lines[index + 1])) {
+      const header = tableRow(line); const rows: string[][] = []; index += 2;
+      while (index < lines.length && lines[index].trim() && lines[index].includes('|')) { rows.push(tableRow(lines[index])); index += 1; }
+      output.push(`<table><thead><tr>${header.map((cell) => `<th>${inlineMarkdown(cell)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${header.map((_, cellIndex) => `<td>${inlineMarkdown(row[cellIndex] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`); continue;
+    }
+
+    const list = line.match(/^\s{0,3}([-+*]|\d+[.)])\s+(.+)$/);
+    if (list) {
+      const ordered = /^\d/.test(list[1]); const items: string[] = [];
+      while (index < lines.length) {
+        const item = lines[index].match(/^\s{0,3}([-+*]|\d+[.)])\s+(.+)$/);
+        if (!item || /^\d/.test(item[1]) !== ordered) break;
+        items.push(`<li>${inlineMarkdown(item[2])}</li>`); index += 1;
+      }
+      output.push(`<${ordered ? 'ol' : 'ul'}>${items.join('')}</${ordered ? 'ol' : 'ul'}>`); continue;
+    }
+
+    if (/^\s*>/.test(line)) {
+      const quote: string[] = [];
+      while (index < lines.length && /^\s*>/.test(lines[index])) { quote.push(lines[index].replace(/^\s*>\s?/, '')); index += 1; }
+      output.push(`<blockquote><p>${inlineMarkdown(quote.join(' '))}</p></blockquote>`); continue;
+    }
+
+    const paragraph: string[] = [line.trim()]; index += 1;
+    while (index < lines.length && lines[index].trim() && !/^\s*(?:#{1,6}\s|```|[-+*]\s+|\d+[.)]\s+|>)/.test(lines[index]) && !(lines[index].includes('|') && index + 1 < lines.length && isTableSeparator(lines[index + 1]))) { paragraph.push(lines[index].trim()); index += 1; }
+    output.push(`<p>${inlineMarkdown(paragraph.join(' '))}</p>`);
+  }
+  return output.join('');
 }
 function convertText(text: string, from: InputKind, to: OutputKind): string {
   if (to === 'txt') return from === 'html' ? new DOMParser().parseFromString(text, 'text/html').body.textContent ?? '' : text;
