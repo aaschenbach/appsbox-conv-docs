@@ -42,6 +42,7 @@ artefatos operacionais e não são versionados.
 - health check: `curl http://127.0.0.1:9700/health`;
 - domínio: `https://docs.appsbox.com.br`;
 - porta interna: `127.0.0.1:9700`.
+- DNS e HTTPS públicos validados em 18/08/2026.
 
 Comandos:
 

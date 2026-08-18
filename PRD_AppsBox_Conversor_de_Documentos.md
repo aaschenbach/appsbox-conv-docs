@@ -191,11 +191,10 @@ contador, parar a unidade, restaurar uma cópia consistente, executar
 
 ## 10. DNS e estado público
 
-O VirtualHost e o certificado estão instalados e foram validados localmente
-com SNI/Host. Em 18/08/2026, a consulta DNS pública para
-`docs.appsbox.com.br` ainda não retornava endereço. O deploy público só deve
-ser considerado concluído depois de criar o registro DNS apontando para o IP
-deste servidor e validar:
+O VirtualHost e o certificado estão instalados. Em 18/08/2026, a resolução DNS
+pública propagou e a URL foi validada através do proxy Cloudflare, com resposta
+HTTPS 200, health check e contador funcionais. Validar novamente após qualquer
+alteração de DNS ou Apache:
 
 ```bash
 curl -I http://docs.appsbox.com.br/
