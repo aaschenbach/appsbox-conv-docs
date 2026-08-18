@@ -12,7 +12,7 @@ npm run build
 install -d "$STAGING/assets"
 install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js "$STAGING/"
 install -m 0644 dist/main.js "$STAGING/main.js"
-install -m 0644 appsboxconvdocslogo.png "$STAGING/assets/appsboxconvdocslogo.png"
+install -m 0644 public/assets/appsboxconvdocslogo.png "$STAGING/assets/appsboxconvdocslogo.png"
 sudo install -d -o ubuntu -g ubuntu -m 0755 "$PUBLISH/releases" "$PUBLISH/releases/$RELEASE"
 sudo cp -a "$STAGING/." "$PUBLISH/releases/$RELEASE/"
 sudo chmod 0755 "$PUBLISH/releases/$RELEASE" "$PUBLISH/releases/$RELEASE/assets"

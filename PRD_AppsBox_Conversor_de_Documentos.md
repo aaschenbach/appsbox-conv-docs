@@ -14,8 +14,8 @@ O MVP é uma PWA estática que lê arquivos no navegador e gera o resultado no
 próprio dispositivo. O backend não recebe documentos: mantém somente um
 contador agregado de conversões concluídas.
 
-O logotipo oficial é `appsboxconvdocslogo.png`, mantido na raiz do repositório e
-publicado em `public/assets/appsboxconvdocslogo.png`.
+O logotipo oficial é `public/assets/appsboxconvdocslogo.png`, publicado no shell
+da aplicação.
 
 ## 2. Escopo funcional implantado
 
