@@ -1,9 +1,39 @@
 # PRD — AppsBox Conversor de Documentos
 
-> **Status:** especificação de produto para implementação  
+> **Status:** pronta para iniciar a fundação e o spike técnico; a matriz pública do MVP só será congelada após os gates da seção 47
 > **Produto de referência:** AppsBox Conversor de Imagens  
 > **URL proposta:** `https://docs.appsbox.com.br`  
 > **Nome:** AppsBox Conversor de Documentos
+
+O logotipo-fonte do produto é `appsboxconvdocslogo.png`, versionado na raiz
+deste repositório. Na implementação, ele deve ser copiado para `public/assets/`
+e usado para ícone, `apple-touch-icon` e manifesto. Não alterar a arte final ou
+substituí-la por um asset genérico.
+
+---
+
+## 0. Decisões de implementação e gates de lançamento
+
+Este PRD define o comportamento desejado, mas não autoriza anunciar como
+suportada uma conversão cuja engine local ainda não tenha sido comprovada. O
+trabalho começa em duas entregas deliberadamente separadas:
+
+1. **Fundação:** shell PWA, fila, análise local, matriz declarativa sem
+   capacidades habilitadas por padrão, downloads, tema, contador e infraestrutura.
+2. **Spike e habilitação:** cada combinação só passa a `enabled` depois dos
+   testes da seção 47 e dos critérios de aceite da seção 43. A matriz publicada
+   é a única fonte para `accept`, textos de ajuda, controles e SEO.
+
+O MVP não tem uma lista de formatos prometida antes desse gate. As tabelas da
+seção 6 são um backlog de combinações candidatas, não um contrato público. Isso
+evita que uma dependência WebAssembly, uma licença ou um limite de memória
+transforme uma promessa de produto em regressão de privacidade.
+
+Uma combinação aprovada deve registrar no repositório: versão e licença da
+engine, tamanho transferido e comprimido, navegadores aprovados, arquivos de
+teste usados, limitações conhecidas e revisão que a habilitou. A remoção de uma
+combinação da matriz deve ocultá-la imediatamente da interface, sem fallback
+remoto.
 
 ---
 
@@ -163,9 +193,9 @@ Usuários que precisam realizar conversões pontuais sem instalar uma suíte com
 
 ---
 
-## 6. Escopo de formatos
+## 6. Escopo de formatos candidatos
 
-A disponibilidade real de cada combinação deve ser validada pela engine escolhida e por testes de compatibilidade antes de ser anunciada como suportada.
+A disponibilidade real de cada combinação deve ser validada pela engine escolhida e por testes de compatibilidade antes de ser anunciada como suportada. Até essa validação, “MVP” nas tabelas significa **candidata ao MVP**, não funcionalidade confirmada.
 
 A interface nunca deve oferecer uma combinação que a versão implantada não consiga executar.
 
@@ -237,7 +267,7 @@ A implementação deve ser modular. Uma única engine não precisa resolver toda
 
 ### 7.1 Engine de documentos estruturados
 
-Uma engine WebAssembly baseada em Pandoc é a candidata preferencial para conversões semânticas entre formatos como:
+Uma engine WebAssembly baseada em Pandoc é uma candidata a avaliar para conversões semânticas entre formatos como:
 
 - Markdown;
 - HTML;
@@ -248,7 +278,12 @@ Uma engine WebAssembly baseada em Pandoc é a candidata preferencial para conver
 - TXT;
 - PDF quando houver pipeline local compatível.
 
-Ela deve executar dentro do navegador e preferencialmente dentro de Web Worker.
+Ela só poderá ser adotada se a distribuição realmente executar inteiramente no
+navegador, tiver licença compatível e conseguir produzir os formatos propostos
+sem binários ou serviços auxiliares no servidor. Essa premissa não deve ser
+assumida pelo nome da ferramenta. A prova deve cobrir especialmente DOCX/ODT e
+PDF, que podem requerer componentes adicionais ou não ser viáveis nesse runtime.
+O trabalho pesado deve executar em Web Worker.
 
 ### 7.2 Engine Office
 
@@ -286,6 +321,10 @@ Usar biblioteca local de parsing/renderização de PDF para:
 - obter metadados básicos;
 - permitir seleção de páginas;
 - suportar visualização ou prévia quando necessário.
+
+O parser de PDF deve ser testado contra documentos malformados e limitar o
+trabalho por arquivo. “Possui camada de texto” significa que a extração retorna
+texto utilizável; não basta o PDF declarar uma fonte ou um objeto textual.
 
 ### 7.4 OCR
 
@@ -808,6 +847,10 @@ Content-Type: application/json
 
 O servidor incrementa e retorna apenas o total global.
 
+O cliente deve fazer essa chamada somente depois que o `Blob` final tiver sido
+gerado e o download tiver sido disponibilizado. Uma tentativa, cancelamento ou
+falha não incrementa o contador.
+
 ### 19.2 Consulta
 
 ```http
@@ -906,7 +949,21 @@ Evitar processamento pesado no thread principal.
 
 ### 21.3 CSP
 
-Adotar Content Security Policy compatível com a execução das engines necessárias sem abrir permissões desnecessárias.
+O VirtualHost deve enviar uma CSP de produção restritiva. Como base, ela deve
+permitir apenas recursos do próprio domínio e os tipos locais estritamente
+necessários ao processamento: `default-src 'self'`; `connect-src 'self'`;
+`worker-src 'self' blob:`; `script-src 'self'`; `style-src 'self'`; `img-src
+'self' data: blob:`; `font-src 'self' data:`; `object-src 'none'`; `base-uri
+'self'`; `frame-ancestors 'none'`; `form-action 'self'`.
+
+Qualquer necessidade de `blob:`, `data:`, `wasm-unsafe-eval`, fonte externa ou
+origem adicional deve ser demonstrada pelo spike, limitada à diretiva mínima e
+documentada. Não usar `*`, `unsafe-inline` ou CDN de terceiros para contornar
+problemas de carregamento.
+
+Se uma engine exigir `SharedArrayBuffer`, avaliar COOP/COEP/CORP antes de
+habilitá-la. O modo multithread é opcional: a ausência desses headers ou a
+incompatibilidade com uma dependência nunca autoriza reduzir a privacidade.
 
 ### 21.4 Arquivos malformados
 
@@ -917,7 +974,18 @@ Falhas de parser devem:
 - produzir mensagem compreensível;
 - liberar memória após erro.
 
-### 21.5 Atualizações
+### 21.5 Arquivos compactados e limites de trabalho
+
+DOCX, XLSX, PPTX, ODT, ODS, ODP e EPUB são contêineres compactados. A análise
+deve validar assinatura e estrutura antes de extrair e impor limites por
+arquivo para quantidade de entradas, tamanho descompactado, profundidade e
+tempo de análise. Esses limites protegem contra ZIP bombs e devem resultar em
+uma mensagem clara, sem upload ou tentativa de processar indefinidamente.
+
+Os valores iniciais são parâmetros de implementação a medir no spike; devem
+ser documentados e testados, não escondidos como limite universal de tamanho.
+
+### 21.6 Atualizações
 
 Bibliotecas de parsing e engines devem ser tratadas como dependências de segurança e atualizadas de maneira controlada.
 
@@ -1091,6 +1159,13 @@ Exclusivamente contador:
 - frontend em releases imutáveis;
 - symlink `current`.
 
+O backend deve aceitar somente `GET /health`, `GET /api/count` e `POST
+/api/count` no caminho exato. O `POST` aceita exclusivamente o corpo UTF-8
+`{}` com limite pequeno; deve rejeitar conteúdo adicional e não registrar corpo,
+headers sensíveis ou IP como dado da aplicação. Como a API é same-origin por
+meio do Apache, não é necessário CORS permissivo; se o header for enviado,
+deve restringir-se a `https://docs.appsbox.com.br`.
+
 ---
 
 ## 27. Estrutura sugerida do repositório
@@ -1122,11 +1197,16 @@ deploy/
   systemd/
 
 README.md
-PRD.md
+PRD_AppsBox_Conversor_de_Documentos.md
 AGENTS.md
 ```
 
 A organização final pode ser simplificada, mas deve separar claramente interface, workers e adapters das engines.
+
+Adicionar também `tests/fixtures/` somente com arquivos sintéticos, públicos ou
+devidamente licenciados. Arquivos de teste não podem conter dados pessoais ou
+documentos de clientes. O catálogo de fixtures deve explicar que risco cada um
+exerce (acentos, tabela, arquivo inválido, ZIP bomb controlado etc.).
 
 ---
 
@@ -1378,6 +1458,26 @@ O banco não deve guardar qualquer informação do documento.
 
 Manter o padrão operacional do Conversor de Imagens.
 
+Estado confirmado do servidor em 18/08/2026:
+
+- o certificado `/etc/letsencrypt/live/appsbox.com.br/` cobre
+  `*.appsbox.com.br` e está válido até 12/11/2026;
+- `docs.appsbox.com.br` ainda não resolve no DNS público; criar e validar o
+  registro antes de habilitar o VirtualHost;
+- o conversor de imagens já usa a porta `127.0.0.1:9600`; reservar
+  `127.0.0.1:9700` para o contador deste produto após conferir que permanece
+  livre no momento do onboarding;
+- o host possui cerca de 1 GiB de RAM. A conversão é cliente-side, mas build,
+  serviço do contador e cache de releases devem permanecer leves.
+
+O VirtualHost próprio deve chamar-se `docs.appsbox.com.br.conf`, redirecionar
+HTTP para HTTPS e servir exclusivamente
+`/var/www/appsbox-conv-documentos/current`. Ele deve reutilizar o certificado
+curinga existente, sem executar Certbot. Os únicos proxies são `/api/` e
+`/health` para `127.0.0.1:9700`; nenhuma rota de documento pode ser enviada ao
+backend. A configuração deve conter os headers de segurança da seção 21 e
+`Options -Indexes`.
+
 Frontend:
 
 ```text
@@ -1401,6 +1501,13 @@ Requisitos:
 - banco fora do diretório publicado;
 - health check após publicação.
 
+O deploy deve criar o diretório de dados
+`/mnt/dados/appsbox-conv-documentos/` (modo 750, proprietário `ubuntu`) fora
+do Git, iniciar `appsbox-conv-documentos.service` e validar, nesta ordem:
+build/AST, health local, `apache2ctl configtest`, mapa de VirtualHosts,
+HTTP→HTTPS, página HTTPS, `/health`, contador e certificado apresentado. A
+publicação não deve modificar os demais AppsBox.
+
 ---
 
 ## 39. Cache HTTP
@@ -1413,14 +1520,14 @@ Sem cache persistente agressivo:
 - manifesto;
 - service worker.
 
-Assets versionados:
+Assets versionados e com nome imutável (hash no nome ou diretório de versão):
 
 - CSS;
 - JavaScript;
 - WebAssembly;
 - assets de engine.
 
-Engines grandes devem possuir estratégia de versionamento para invalidar corretamente o cache quando atualizadas.
+Engines grandes devem possuir estratégia de versionamento para invalidar corretamente o cache quando atualizadas. Se algum asset mantiver nome estável, ele deve receber `no-cache`; não usar cache longo para `main.js`, worker ou WASM com nome estável.
 
 ---
 
@@ -1629,14 +1736,13 @@ O MVP deve ser dividido em duas camadas de compromisso.
 
 ### 48.1 Núcleo obrigatório
 
-Deve lançar:
+Deve lançar, depois de habilitar ao menos uma classe de conversão aprovada:
 
 - interface AppsBox;
 - seleção múltipla;
 - fila sequencial;
-- DOCX, ODT, RTF, TXT, Markdown, HTML e EPUB nas combinações validadas;
-- PDF com camada de texto → TXT/Markdown;
-- saída PDF nas combinações que passarem nos testes;
+- somente os formatos e as combinações que passarem nos testes;
+- nenhuma família Office, PDF ou EPUB é obrigatória por nome antes do spike;
 - PWA;
 - cache offline;
 - tema;
@@ -1781,7 +1887,7 @@ Engines:
 
 ## 55. Documentação do repositório
 
-### `PRD.md`
+### `PRD_AppsBox_Conversor_de_Documentos.md`
 
 Fonte de verdade do comportamento do produto.
 
@@ -1877,3 +1983,33 @@ A experiência ideal é:
 10. nenhum conteúdo do documento sai do dispositivo.
 
 O produto deve preferir **menos conversões confiáveis, claras e privadas** a uma lista extensa de formatos com comportamento inconsistente ou dependência oculta de processamento remoto.
+
+---
+
+## 59. Checklist de prontidão para desenvolvimento
+
+Antes de escrever a primeira engine, registrar estas decisões no issue ou no
+documento técnico da implementação:
+
+- [ ] confirmar a licença, a origem, o checksum e a versão de cada dependência
+  de conversão;
+- [ ] escolher a primeira combinação candidata e aprovar seu spike local;
+- [ ] definir os limites de contêiner compactado e os fixtures sintéticos;
+- [ ] copiar o logotipo-fonte para os assets PWA e gerar os tamanhos de ícone
+  requeridos pelo manifesto;
+- [ ] criar a matriz declarativa com todas as capacidades inicialmente
+  desabilitadas;
+- [ ] implementar contador compatível com o contrato estrito da seção 26;
+- [ ] preparar modelo de serviço, VirtualHost e deploy para a porta 9700;
+- [ ] criar registro DNS de `docs.appsbox.com.br` e validar sua resolução;
+- [ ] incluir a nova família de código, release, VirtualHost e cópia SQLite na
+  allowlist do backup unificado e no respectivo upload offsite, antes da
+  publicação;
+- [ ] cadastrar o produto no portal `appsbox.com.br` depois da URL pública ser
+  validada;
+- [ ] atualizar a documentação operacional em
+  `/mnt/dados/oci/docs/appsbox-conv-documentos.md`, `apache.md`, `backups.md`
+  e o mapa de serviços após o onboarding.
+
+A existência do certificado curinga elimina apenas a emissão de certificado;
+não substitui a validação de DNS, VirtualHost, headers e acesso HTTPS público.

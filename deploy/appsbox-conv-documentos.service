@@ -1,0 +1,16 @@
+[Unit]
+Description=AppsBox Conversor de Documentos - contador global
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/dados
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/mnt/dados/projetos/appsbox-conv-documentos
+ExecStart=/mnt/dados/projetos/appsbox-conv-documentos/scripts/start.sh
+ExecStop=/mnt/dados/projetos/appsbox-conv-documentos/scripts/stop.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
