@@ -175,4 +175,4 @@ form.addEventListener('submit', async (event) => { event.preventDefault(); if (b
 function renderTheme(themeName: 'light' | 'dark'): void { document.documentElement.dataset.theme = themeName; theme.textContent = themeName === 'dark' ? '☀' : '☾'; theme.setAttribute('aria-label', themeName === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'); }
 const initialTheme = localStorage.getItem('appsbox-conv-documentos-theme') === 'dark' ? 'dark' : 'light'; renderTheme(initialTheme);
 fetch('/api/count').then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(() => undefined);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?release=__RELEASE__').catch(() => undefined);
