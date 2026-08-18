@@ -1,1 +1,36 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Converta TXT, Markdown e HTML diretamente no navegador."><meta name="theme-color" content="#102a43"><link rel="icon" href="/assets/appsboxconvdocslogo.png"><link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/style.css"><title>Conversor de Documentos · AppsBox</title></head><body><header><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt=""> <span>AppsBox</span></a><span>Conversor de documentos</span><button id="theme-toggle" type="button">🌙 Escuro</button></header><main><section class="hero"><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Conversor de documentos</h1><p>Privado e direto no seu dispositivo.</p><p class="privacy">● Seus documentos não são enviados<br>● Funciona offline depois de carregado</p></section><section class="card"><div class="card-heading"><h2>Documentos</h2><p id="file-summary">Nenhum arquivo selecionado</p></div><label id="dropzone" class="dropzone" for="files"><strong>＋ Adicionar documentos</strong><small>TXT, Markdown ou HTML · múltiplos arquivos</small><input id="files" type="file" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html" multiple></label><div id="queue"></div><form id="converter-form"><label class="field" for="output">Formato de saída<select id="output"><option value="html">HTML — preservar leitura no navegador</option><option value="txt">TXT — texto simples</option><option value="md">Markdown — estrutura leve</option></select></label><div class="actions"><button class="primary" type="submit">Converter documentos</button><button class="secondary" id="reset" type="button">Limpar seleção</button></div></form><p id="status" class="status" role="status" aria-live="polite">Pronto para converter.</p><div id="results" class="results" aria-live="polite"></div></section><section class="trust"><strong>Conversões realizadas</strong><span id="conversion-count">—</span><p>Contagem total. Nenhum arquivo ou identificador é coletado.</p></section></main><footer><a href="https://appsbox.com.br/">Início do AppsBox</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/termos">Termos</a><a href="mailto:contato@appsbox.com.br">Contato</a></footer><script type="module" src="/main.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+  <meta name="description" content="Conversão local de TXT, Markdown e HTML.">
+  <link rel="icon" type="image/png" href="/assets/appsboxconvdocslogo.png">
+  <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
+  <title>Conversor de Documentos · AppsBox</title>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro">☾ <span>Escuro</span></button></div>
+  </header>
+  <main>
+    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Conversor de documentos</h1><p>Privado e direto no seu dispositivo.</p></div><p class="availability">● Offline após o primeiro carregamento</p></section>
+    <section class="card" aria-labelledby="converter-title">
+      <div class="card-heading"><h2 id="converter-title">Documentos</h2><p id="file-summary" class="muted">Nenhum arquivo selecionado</p></div>
+      <label id="dropzone" class="dropzone" for="files"><span class="drop-icon">＋</span><span><strong>Adicionar documentos</strong> <em>adiciona à seleção atual</em></span><small>TXT, Markdown ou HTML · múltiplos arquivos</small><input id="files" type="file" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html" multiple></label>
+      <div id="queue" class="queue"></div>
+      <form id="converter-form">
+        <fieldset class="output-field"><legend>Saída</legend><label>Formato<select id="output"><option value="html">HTML — preservar leitura no navegador</option><option value="txt">TXT — texto simples</option><option value="md">Markdown — estrutura leve</option></select><small>Escolha o formato dos arquivos baixados.</small></label></fieldset>
+        <div class="actions"><button class="primary" type="submit">Converter documentos</button><button id="reset" type="button" class="secondary" title="Remove os documentos e resultados desta tela">Limpar seleção</button></div>
+      </form>
+      <p id="status" class="status" role="status" aria-live="polite">Pronto para converter.</p><div id="results" class="results" aria-live="polite"></div>
+    </section>
+    <section class="trust"><div><strong>Conversões realizadas</strong><span id="conversion-count">—</span></div><p>Contagem total. Nenhum arquivo ou identificador é coletado.</p></section>
+  </main>
+  <footer><a href="https://appsbox.com.br/">Início do AppsBox</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/termos">Termos</a><a href="mailto:contato@appsbox.com.br">Contato</a></footer>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
