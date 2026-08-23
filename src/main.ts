@@ -13,10 +13,6 @@ const results = document.querySelector<HTMLElement>('#results')!;
 const count = document.querySelector<HTMLElement>('#conversion-count')!;
 const reset = document.querySelector<HTMLButtonElement>('#reset')!;
 const theme = document.querySelector<HTMLButtonElement>('#theme-toggle')!;
-const cookieBanner = document.querySelector<HTMLElement>('#cookie-banner')!;
-const cookieAccept = document.querySelector<HTMLButtonElement>('#cookie-accept')!;
-const cookieReject = document.querySelector<HTMLButtonElement>('#cookie-reject')!;
-const cookieManage = document.querySelector<HTMLButtonElement>('#cookie-manage')!;
 let jobs: Job[] = [];
 let busy = false;
 
@@ -179,14 +175,5 @@ form.addEventListener('submit', async (event) => { event.preventDefault(); if (b
 function renderTheme(themeName: 'light' | 'dark'): void { document.documentElement.dataset.theme = themeName; theme.textContent = themeName === 'dark' ? '☀' : '☾'; theme.setAttribute('aria-label', themeName === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'); }
 const initialTheme = localStorage.getItem('appsbox-conv-documentos-theme') === 'dark' ? 'dark' : 'light'; renderTheme(initialTheme);
 
-type CookieConsent = 'accepted' | 'rejected';
-const cookieConsentKey = 'appsbox-conv-documentos-cookie-consent';
-function readCookieConsent(): CookieConsent | null { const saved = localStorage.getItem(cookieConsentKey); return saved === 'accepted' || saved === 'rejected' ? saved : null; }
-function renderCookieConsent(): void { const known = readCookieConsent() !== null; cookieBanner.hidden = known; cookieManage.hidden = !known; }
-function chooseCookieConsent(value: CookieConsent): void { localStorage.setItem(cookieConsentKey, value); renderCookieConsent(); }
-cookieAccept.addEventListener('click', () => chooseCookieConsent('accepted'));
-cookieReject.addEventListener('click', () => chooseCookieConsent('rejected'));
-cookieManage.addEventListener('click', () => { localStorage.removeItem(cookieConsentKey); renderCookieConsent(); });
-renderCookieConsent();
 fetch('/api/count').then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?release=__RELEASE__').catch(() => undefined);
