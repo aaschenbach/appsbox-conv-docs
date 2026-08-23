@@ -13,6 +13,10 @@ const results = document.querySelector<HTMLElement>('#results')!;
 const count = document.querySelector<HTMLElement>('#conversion-count')!;
 const reset = document.querySelector<HTMLButtonElement>('#reset')!;
 const theme = document.querySelector<HTMLButtonElement>('#theme-toggle')!;
+const cookieBanner = document.querySelector<HTMLElement>('#cookie-banner')!;
+const cookieAccept = document.querySelector<HTMLButtonElement>('#cookie-accept')!;
+const cookieReject = document.querySelector<HTMLButtonElement>('#cookie-reject')!;
+const cookieManage = document.querySelector<HTMLButtonElement>('#cookie-manage')!;
 let jobs: Job[] = [];
 let busy = false;
 
@@ -174,5 +178,15 @@ theme.addEventListener('click', () => { const next = document.documentElement.da
 form.addEventListener('submit', async (event) => { event.preventDefault(); if (busy || !jobs.length) { setStatus(jobs.length ? 'A conversão já está em andamento.' : 'Selecione ao menos um documento.'); return; } busy = true; renderQueue(); results.replaceChildren(); for (let index = 0; index < jobs.length; index += 1) { const job = jobs[index]; try { setStatus(`Lendo ${job.file.name} — ${index + 1} de ${jobs.length}`, true); const text = await job.file.text(); const converted = convertText(text, job.kind, output.value as OutputKind); const blob = new Blob([converted], { type: output.value === 'html' ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8' }); const link = document.createElement('a'); link.className = 'result-item'; link.download = `${job.file.name.replace(/\.[^.]+$/, '')}.${outputExtension(output.value as OutputKind)}`; link.href = URL.createObjectURL(blob); link.innerHTML = `<span>${escape(link.download)}</span><small>${formatBytes(blob.size)} · baixar</small>`; results.append(link); fetch('/api/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined); } catch { const error = document.createElement('p'); error.className = 'error'; error.textContent = `Não foi possível converter ${job.file.name}.`; results.append(error); } } busy = false; renderQueue(); setStatus('Conversão concluída. Seus documentos permaneceram neste dispositivo.'); });
 function renderTheme(themeName: 'light' | 'dark'): void { document.documentElement.dataset.theme = themeName; theme.textContent = themeName === 'dark' ? '☀' : '☾'; theme.setAttribute('aria-label', themeName === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'); }
 const initialTheme = localStorage.getItem('appsbox-conv-documentos-theme') === 'dark' ? 'dark' : 'light'; renderTheme(initialTheme);
+
+type CookieConsent = 'accepted' | 'rejected';
+const cookieConsentKey = 'appsbox-conv-documentos-cookie-consent';
+function readCookieConsent(): CookieConsent | null { const saved = localStorage.getItem(cookieConsentKey); return saved === 'accepted' || saved === 'rejected' ? saved : null; }
+function renderCookieConsent(): void { const known = readCookieConsent() !== null; cookieBanner.hidden = known; cookieManage.hidden = !known; }
+function chooseCookieConsent(value: CookieConsent): void { localStorage.setItem(cookieConsentKey, value); renderCookieConsent(); }
+cookieAccept.addEventListener('click', () => chooseCookieConsent('accepted'));
+cookieReject.addEventListener('click', () => chooseCookieConsent('rejected'));
+cookieManage.addEventListener('click', () => { localStorage.removeItem(cookieConsentKey); renderCookieConsent(); });
+renderCookieConsent();
 fetch('/api/count').then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?release=__RELEASE__').catch(() => undefined);
