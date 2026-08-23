@@ -10,7 +10,7 @@ npm ci
 npm run check
 npm run build
 install -d "$STAGING/assets" "$STAGING/cookies"
-install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js "$STAGING/"
+install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js public/robots.txt public/sitemap.xml public/ads.txt "$STAGING/"
 install -m 0644 dist/main.js "$STAGING/main.js"
 install -m 0644 public/assets/appsboxconvdocslogo.png "$STAGING/assets/appsboxconvdocslogo.png"
 install -m 0644 public/cookies/index.html "$STAGING/cookies/index.html"
