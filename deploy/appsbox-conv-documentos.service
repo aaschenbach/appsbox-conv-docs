@@ -6,7 +6,8 @@ RequiresMountsFor=/mnt/dados
 
 [Service]
 Type=oneshot
-User=ubuntu
+User=aaschen
+Group=aaschen
 WorkingDirectory=/mnt/dados/projetos/appsbox-conv-documentos
 ExecStart=/mnt/dados/projetos/appsbox-conv-documentos/scripts/start.sh
 ExecStop=/mnt/dados/projetos/appsbox-conv-documentos/scripts/stop.sh
