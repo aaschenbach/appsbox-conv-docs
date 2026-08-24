@@ -70,7 +70,7 @@ function pagesData() {
   <link rel="icon" type="image/png" href="/assets/appsboxconvdocslogo.png">
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?release=__RELEASE__">
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>${escapeHtml(title)} · AppsBox</title>
 </head>
@@ -119,7 +119,7 @@ function hubHtml(pages) {
   <link rel="icon" type="image/png" href="/assets/appsboxconvdocslogo.png">
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?release=__RELEASE__">
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>Todas as conversões: TXT, Markdown, HTML, DOCX e PDF · AppsBox</title>
 </head>
