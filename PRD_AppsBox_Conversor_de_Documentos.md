@@ -23,7 +23,8 @@ da aplicação.
 
 - `.txt` — texto simples;
 - `.md` e `.markdown` — Markdown básico;
-- `.html` e `.htm` — HTML.
+- `.html` e `.htm` — HTML;
+- `.docx` — documento OOXML do Word.
 
 Arquivos de outras extensões são rejeitados pela interface e não são enviados.
 
@@ -31,11 +32,24 @@ Arquivos de outras extensões são rejeitados pela interface e não são enviado
 
 - **HTML:** TXT é encapsulado em `<pre>`, Markdown recebe conversão local de
   títulos, parágrafos, negrito e itálico; HTML existente é preservado como
-  texto de saída;
+  texto de saída; DOCX é lido e convertido para HTML equivalente;
 - **TXT:** HTML é convertido para texto usando `DOMParser`; TXT e Markdown são
-  mantidos como texto;
-- **Markdown:** Markdown, TXT e HTML são tratados como texto. HTML não é
-  reconstruído semanticamente para Markdown nesta versão.
+  mantidos como texto; DOCX segue o mesmo caminho do HTML lido;
+- **Markdown:** Markdown, TXT e HTML são tratados como texto. HTML e DOCX não
+  são reconstruídos semanticamente para Markdown nesta versão (apenas
+  encapsulados como HTML/texto de origem);
+- **DOCX:** TXT, Markdown e HTML são normalizados para um HTML intermediário
+  e então serializados como pacote OOXML mínimo (`word/document.xml`,
+  `styles.xml`, `numbering.xml`, `docProps/*`) gerado com JSZip.
+
+A conversão para/de DOCX é feita por um leitor/gravador OOXML escrito à mão
+em `src/docx.ts`, sem Pandoc, LibreOffice ou serviço remoto. Ela preserva
+títulos (H1–H6), negrito, itálico, sublinhado, tachado, listas (com marcador
+ou numeradas), tabelas, hyperlinks e acentuação. Não preserva imagens,
+fontes, estilos customizados além dos títulos/lista padrão, cabeçalho/rodapé,
+notas de rodapé, comentários, controle de alterações, numeração multinível ou
+objetos incorporados — esses elementos são descartados silenciosamente na
+leitura e nunca gerados na escrita.
 
 A conversão é sequencial por arquivo. Cada resultado tem download individual;
 não há ZIP, histórico, edição, pré-visualização avançada ou processamento em
@@ -56,23 +70,31 @@ paralelo.
 
 Não estão implementados nem podem ser anunciados nesta versão:
 
-- DOC/DOCX, ODT/ODS/ODP, RTF, EPUB;
-- XLS/XLSX/CSV e apresentações;
+- DOC binário (`.doc` legado), ODT/ODS/ODP, RTF, EPUB;
+- XLS/XLSX/CSV e apresentações (PPT/PPTX);
 - PDF, OCR e PDF → Office;
 - macros, JavaScript de documentos, objetos ativos ou arquivos protegidos;
 - engine WebAssembly, Pandoc, LibreOffice ou conversão remota;
-- preservação de layout, fontes, imagens, tabelas, paginação ou metadados de
-  formatos complexos;
+- em DOCX: imagens, fontes, estilos customizados, cabeçalho/rodapé, notas de
+  rodapé, comentários, controle de alterações, numeração multinível e objetos
+  incorporados — a leitura os descarta e a escrita nunca os gera;
 - conta, login, histórico, armazenamento de arquivos ou telemetria por arquivo.
 
-Uma expansão de formatos exige spike técnico, fixtures licenciados, revisão de
-licença e atualização deste PRD antes de alterar a interface.
+O suporte a DOCX (spike concluído nesta versão) usa exclusivamente
+JSZip 3.10.1 (MIT, vendorizado em `public/vendor/jszip.js`, sem CDN) e as
+APIs nativas `DOMParser`/`XMLSerializer` do navegador; não há dependência de
+outra biblioteca de terceiros para nenhum formato. Uma expansão além de DOCX
+(novo formato de entrada/saída) exige spike técnico, fixtures licenciados,
+revisão de licença e atualização deste PRD antes de alterar a interface.
 
 ## 4. Privacidade e segurança
 
-O arquivo é lido com `File.text()` e processado com `DOMParser` no navegador.
-HTML de entrada nunca é inserido como interface da aplicação durante a análise;
-o resultado HTML é apenas um arquivo para download. O backend recebe somente:
+O arquivo é lido com `File.text()` (TXT/Markdown/HTML) ou `File.arrayBuffer()`
+(DOCX) e processado com `DOMParser`/JSZip no navegador; o DOCX gerado na saída
+é montado com JSZip e baixado via `Blob`/`URL.createObjectURL`, sem passar
+pelo backend em nenhum momento. HTML de entrada nunca é inserido como
+interface da aplicação durante a análise; o resultado HTML é apenas um
+arquivo para download. O backend recebe somente:
 
 ```http
 GET  /api/count
@@ -94,18 +116,20 @@ Não há CDN, origem externa, upload ou rota de conversão no servidor.
 
 ```text
 src/main.ts                         interface e conversão local
+src/docx.ts                         leitor/gravador OOXML (DOCX) via JSZip
 public/index.html                   shell PWA
 public/style.css                    estilos responsivos e temas
 public/manifest.webmanifest         manifesto instalável
 public/service-worker.js            cache do shell
 public/assets/appsboxconvdocslogo.png
+public/vendor/jszip.js              JSZip 3.10.1 (MIT), vendorizado
 backend/counter.py                  contador HTTP + SQLite WAL
 scripts/start.sh                    inicialização do contador
 scripts/stop.sh                     parada segura do contador
 scripts/deploy.sh                   build e publicação atômica
 deploy/*.service                    modelo systemd
 deploy/*.conf                       modelo Apache
-tests/                              reservado para fixtures e testes futuros
+tests/docx.test.mjs                 round trip DOCX↔HTML (node --test + jsdom)
 ```
 
 `dist/`, `node_modules/`, `.run/`, `__pycache__/` e bancos SQLite são artefatos
@@ -119,10 +143,17 @@ Requisitos: Node.js, npm e Python 3.
 npm ci
 npm run check
 npm run build
+npm test
 python3 -m py_compile backend/counter.py
 python3 -m json.tool public/manifest.webmanifest >/dev/null
 node --check public/service-worker.js
 ```
+
+`npm test` roda `tests/docx.test.mjs` sob `node --test`, usando `jsdom` (só em
+tempo de teste, nunca embarcado no navegador) para fornecer `DOMParser` fora
+do browser e validar o round trip DOCX↔HTML, incluindo documentos com estilo
+`ListBullet`/`ListNumber` (o padrão gerado pelo próprio Word e por
+bibliotecas como `python-docx`, sem `numPr` explícito).
 
 O TypeScript é compilado para `dist/main.js`. Antes de qualquer commit, manter
 UTF-8 sem BOM e preservar todas as acentuações em português.
@@ -204,11 +235,15 @@ curl https://docs.appsbox.com.br/health
 
 ## 11. Próximas versões
 
-O próximo trabalho permitido é um spike isolado, sem alterar a promessa
-pública, para avaliar uma engine local de documentos estruturados. Cada novo
-formato deverá incluir fixtures com acentos, conteúdo malformado e casos de
-perda de fidelidade, além de testes de privacidade e offline. Sem aprovação do
-spike, a matriz atual permanece congelada.
+O spike de DOCX foi concluído e entregue nesta versão (24/08/2026): leitor e
+gravador OOXML próprios, sem Pandoc/LibreOffice/serviço remoto, cobertos por
+`tests/docx.test.mjs` e validados contra `python-docx` como leitor
+independente. A matriz de formatos permanece congelada além de TXT, Markdown,
+HTML e DOCX. Qualquer novo formato (ODT, RTF, PDF, planilhas, apresentações
+etc.) exige um spike isolado equivalente, sem alterar a promessa pública até
+aprovação: fixtures com acentos, conteúdo malformado e casos de perda de
+fidelidade, testes de privacidade e offline, e atualização deste PRD antes de
+mudar a interface.
 
 ## 12. Documentos relacionados
 

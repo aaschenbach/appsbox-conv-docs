@@ -20,12 +20,20 @@
 - `tests/`: fixtures e testes, quando existirem.
 
 Não adicionar conversão remota, upload, conta, histórico ou telemetria por
-arquivo. Documentos nunca podem chegar ao backend.
+arquivo. Documentos nunca podem chegar ao backend — inclusive DOCX, que é
+lido/gravado inteiramente no navegador com JSZip (`public/vendor/jszip.js`,
+MIT, vendorizado localmente, sem CDN) e `DOMParser`/`XMLSerializer`.
 
 ## Formatos atualmente suportados
 
-Somente TXT, Markdown (`.md`, `.markdown`) e HTML (`.html`, `.htm`) como entrada;
-HTML, TXT e Markdown como saída. Não anunciar Office, PDF, OCR ou EPUB.
+TXT, Markdown (`.md`, `.markdown`), HTML (`.html`, `.htm`) e DOCX (`.docx`)
+como entrada; HTML, TXT, Markdown e DOCX como saída. A conversão DOCX é um
+gerador/leitor OOXML mínimo escrito à mão (`src/docx.ts`): preserva títulos,
+negrito/itálico/sublinhado/tachado, listas, tabelas, links e acentuação, mas
+não preserva imagens, fontes, estilos customizados, cabeçalho/rodapé,
+comentários, controle de alterações ou numeração aninhada. Não anunciar
+outros formatos Office (XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, RTF), PDF, OCR ou
+EPUB.
 
 ## Validação obrigatória
 
@@ -33,6 +41,7 @@ HTML, TXT e Markdown como saída. Não anunciar Office, PDF, OCR ou EPUB.
 npm ci
 npm run check
 npm run build
+npm test
 python3 -m py_compile backend/counter.py
 python3 -m json.tool public/manifest.webmanifest >/dev/null
 node --check public/service-worker.js

@@ -9,9 +9,10 @@ cd "$ROOT"
 npm ci
 npm run check
 npm run build
-install -d "$STAGING/assets" "$STAGING/cookies"
+install -d "$STAGING/assets" "$STAGING/cookies" "$STAGING/vendor"
 install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js public/robots.txt public/sitemap.xml public/ads.txt "$STAGING/"
-install -m 0644 dist/main.js "$STAGING/main.js"
+install -m 0644 dist/main.js dist/docx.js "$STAGING/"
+install -m 0644 public/vendor/jszip.js "$STAGING/vendor/jszip.js"
 install -m 0644 public/assets/appsboxconvdocslogo.png "$STAGING/assets/appsboxconvdocslogo.png"
 install -m 0644 public/cookies/index.html "$STAGING/cookies/index.html"
 sed -i "s/>desenvolvimento</>$RELEASE</" "$STAGING/index.html"
