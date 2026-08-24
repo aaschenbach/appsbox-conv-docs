@@ -19,7 +19,7 @@ install -m 0644 public/assets/appsboxconvdocslogo.png "$STAGING/assets/appsboxco
 install -m 0644 public/cookies/index.html "$STAGING/cookies/index.html"
 sed -i "s/>desenvolvimento</>$RELEASE</; s/__RELEASE__/$RELEASE/g" "$STAGING/index.html"
 sed -i "s/appsbox-conv-documentos-v2/appsbox-conv-documentos-$RELEASE/" "$STAGING/service-worker.js"
-sed -i "s/__RELEASE__/$RELEASE/g; s#from './docx.js'#from './docx.js?release=$RELEASE'#; s#from './pdf.js'#from './pdf.js?release=$RELEASE'#" "$STAGING/main.js"
+sed -i "s/__RELEASE__/$RELEASE/g; s#from './docx.js'#from './docx.js?release=$RELEASE'#; s#from './pdf.js'#from './pdf.js?release=$RELEASE'#" "$STAGING/main.js" "$STAGING/docx.js" "$STAGING/pdf.js"
 find "$STAGING/cookies" "$STAGING/converter" -name '*.html' -exec sed -i "s/__RELEASE__/$RELEASE/g" {} +
 sudo install -d -o aaschen -g aaschen -m 0755 "$PUBLISH/releases" "$PUBLISH/releases/$RELEASE"
 sudo cp -a "$STAGING/." "$PUBLISH/releases/$RELEASE/"
