@@ -42,10 +42,14 @@ PDF (`.pdf`) como entrada; HTML, TXT, Markdown, DOCX e PDF como saída.
   fontes — usa as 4 variantes padrão de Courier (monoespaçada) para permitir
   quebra de linha e paginação por contagem de caracteres, sem tabela de
   largura de glifo; não é uma réplica visual do documento de origem, mas
-  preserva o texto, títulos, negrito/itálico, listas e tabelas (como texto
-  delimitado) do HTML normalizado de entrada. A leitura usa pdf.js para
-  extrair texto corrido do PDF de origem; não reconstrói títulos, tabelas,
-  listas ou links do PDF original — só o conteúdo textual.
+  preserva o texto, títulos, negrito/itálico, listas e tabelas do HTML
+  normalizado de entrada. Tabelas são desenhadas como uma grade real
+  (bordas, largura de coluna proporcional ao conteúdo, cabeçalho com fundo
+  sombreado, quebra de linha por célula), não como texto delimitado por
+  `|`; a única limitação é que o cabeçalho não se repete quando a tabela
+  atravessa uma quebra de página. A leitura usa pdf.js para extrair texto
+  corrido do PDF de origem; não reconstrói títulos, tabelas, listas ou
+  links do PDF original — só o conteúdo textual.
 
 Não anunciar outros formatos Office (XLS/XLSX, PPT/PPTX, ODT/ODS/ODP, RTF),
 OCR ou EPUB.

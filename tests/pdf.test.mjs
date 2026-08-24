@@ -43,6 +43,19 @@ test('quebra em múltiplas páginas quando o conteúdo excede uma página A4', a
   assert.ok(pageCount >= 2, `esperado >= 2 páginas, obteve ${pageCount}`);
 });
 
+test('tabela é desenhada como grade real (bordas por célula), não como texto delimitado por |', async () => {
+  const html = '<table><tr><th>Produto</th><th>Qtd</th></tr><tr><td>Item A</td><td>3</td></tr></table><p>Depois da tabela.</p>';
+  const bytes = await htmlToPdfBytes(html);
+  const text = bytesToLatin1(bytes);
+  // Conteúdo do stream é comprimido apenas como texto plano (sem FlateDecode),
+  // então os operadores PDF aparecem literalmente: 're S' desenha o retângulo
+  // de borda de cada célula; sem isso a tabela voltaria a ser texto com '|'.
+  assert.match(text, /re S Q/); // pelo menos um retângulo de borda de célula
+  assert.doesNotMatch(text, /\(Item A \| 3\)/); // não é mais texto delimitado por |
+  assert.match(text, /\(Item A\)/);
+  assert.match(text, /\(Depois da tabela\.\)/);
+});
+
 test('documento vazio ainda produz um PDF de uma página válido', async () => {
   const bytes = await htmlToPdfBytes('<p></p>');
   const text = bytesToLatin1(bytes);

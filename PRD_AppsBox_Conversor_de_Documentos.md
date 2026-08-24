@@ -61,11 +61,15 @@ A conversão para/de PDF é feita em `src/pdf.ts`. A **escrita** é um gerador
 PDF próprio (objetos PDF montados à mão: catálogo, páginas, fontes padrão,
 fluxo de conteúdo, tabela xref) que usa as 4 variantes de Courier
 (monoespaçada, sem incorporar fonte) para poder quebrar linha e paginar por
-contagem de caracteres — títulos, negrito, itálico, listas e tabelas (como
-texto delimitado por `|`) são preservados, mas o layout visual é
-monoespaçado, não uma réplica do documento de origem; não há links clicáveis,
-sublinhado real ou imagens no PDF gerado (sublinhado/tachado são desenhados
-como um traço). A **leitura** usa pdf.js (Mozilla, Apache-2.0, vendorizado em
+contagem de caracteres — títulos, negrito, itálico e listas são preservados,
+mas o layout visual é monoespaçado, não uma réplica do documento de origem;
+tabelas são desenhadas como uma grade real (bordas, largura de coluna
+proporcional ao conteúdo mais longo de cada coluna, cabeçalho com fundo
+sombreado, quebra de linha por célula e nova página entre linhas quando
+necessário), mas o cabeçalho não se repete quando a tabela atravessa uma
+quebra de página; não há links clicáveis, sublinhado real ou imagens no PDF
+gerado (sublinhado/tachado são desenhados como um traço). A **leitura** usa
+pdf.js (Mozilla, Apache-2.0, vendorizado em
 `public/vendor/pdfjs/`, carregado sob demanda) para extrair texto corrido do
 PDF de origem via `getTextContent`; não reconstrói títulos, tabelas, listas
 ou links do PDF original.
@@ -99,9 +103,10 @@ Não estão implementados nem podem ser anunciados nesta versão:
   rodapé, comentários, controle de alterações, numeração multinível e objetos
   incorporados — a leitura os descarta e a escrita nunca os gera;
 - em PDF: imagens, fontes incorporadas/customizadas, layout visual
-  proporcional, links clicáveis, tabelas com grade real, cabeçalho/rodapé,
-  formulários e assinaturas — a escrita gera apenas texto monoespaçado
-  paginado e a leitura extrai apenas texto corrido;
+  proporcional, links clicáveis, cabeçalho/rodapé de tabela repetido entre
+  páginas, formulários e assinaturas — a escrita gera texto monoespaçado
+  paginado (com tabelas em grade real, mas sem repetir o cabeçalho da tabela
+  numa quebra de página) e a leitura extrai apenas texto corrido;
 - conta, login, histórico, armazenamento de arquivos ou telemetria por arquivo.
 
 O suporte a DOCX e PDF (spikes concluídos) usa exclusivamente

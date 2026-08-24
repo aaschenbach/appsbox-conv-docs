@@ -16,13 +16,15 @@ const PAGE_H = 841.89;
 const MARGIN = 56.7;
 const USABLE_W = PAGE_W - MARGIN * 2;
 const CHAR_ADVANCE = 0.6; // Courier: 600/1000 em, igual para regular/negrito/itálico
+const TABLE_FONT_SIZE = 9;
+const CELL_PAD = 4;
 
 type Char = { ch: string; flags: RunFlags };
 type Block =
   | { kind: 'heading'; level: number; parts: RunPart[] }
   | { kind: 'paragraph'; parts: RunPart[] }
   | { kind: 'listitem'; prefix: string; parts: RunPart[] }
-  | { kind: 'table-row'; cells: RunPart[][] }
+  | { kind: 'table'; rows: { header: boolean; cells: RunPart[][] }[] }
   | { kind: 'rule' };
 
 function visitBlocks(node: Node, blocks: Block[]): void {
@@ -56,10 +58,11 @@ function visitBlocks(node: Node, blocks: Block[]): void {
   }
   if (tag === 'hr') { blocks.push({ kind: 'rule' }); return; }
   if (tag === 'table') {
-    Array.from(element.querySelectorAll('tr')).forEach((row) => {
-      const cells = Array.from(row.children).map((cell) => collectRuns(cell, cell.tagName.toLowerCase() === 'th' ? { bold: true } : {}));
-      blocks.push({ kind: 'table-row', cells });
-    });
+    const rows = Array.from(element.querySelectorAll('tr')).map((row) => ({
+      header: Array.from(row.children).some((cell) => cell.tagName.toLowerCase() === 'th'),
+      cells: Array.from(row.children).map((cell) => collectRuns(cell, cell.tagName.toLowerCase() === 'th' ? { bold: true } : {})),
+    }));
+    if (rows.length) blocks.push({ kind: 'table', rows });
     return;
   }
   Array.from(element.children).forEach((child) => visitBlocks(child, blocks));
@@ -160,16 +163,25 @@ export async function htmlToPdfBytes(html: string): Promise<Uint8Array> {
     if (parts.length) blocks.push({ kind: 'paragraph', parts });
   }
 
-  type RenderLine = { size: number; runs: { text: string; flags: RunFlags }[] };
-  const pages: RenderLine[][] = [[]];
+  type RenderItem =
+    | { kind: 'text'; size: number; runs: { text: string; flags: RunFlags }[] }
+    | { kind: 'rule' }
+    | { kind: 'gap'; height: number }
+    | { kind: 'table-row'; header: boolean; colWidths: number[]; cellLineLists: { text: string; flags: RunFlags }[][][]; rowHeight: number };
+  const pages: RenderItem[][] = [[]];
   let cursorY = PAGE_H - MARGIN;
   const lineHeight = (size: number): number => size * 1.25;
-  const ensureSpace = (size: number): void => {
-    if (cursorY - lineHeight(size) < MARGIN) { pages.push([]); cursorY = PAGE_H - MARGIN; }
+  const ensureSpace = (height: number): void => {
+    if (cursorY - height < MARGIN) { pages.push([]); cursorY = PAGE_H - MARGIN; }
+  };
+  const emitGap = (height: number): void => {
+    ensureSpace(height);
+    pages[pages.length - 1].push({ kind: 'gap', height });
+    cursorY -= height;
   };
   const emitLine = (size: number, runs: { text: string; flags: RunFlags }[]): void => {
-    ensureSpace(size);
-    pages[pages.length - 1].push({ size, runs });
+    ensureSpace(lineHeight(size));
+    pages[pages.length - 1].push({ kind: 'text', size, runs });
     cursorY -= lineHeight(size);
   };
   const emitWrapped = (parts: RunPart[], size: number, prefix = ''): void => {
@@ -177,6 +189,32 @@ export async function htmlToPdfBytes(html: string): Promise<Uint8Array> {
     if (prefix) chars.unshift(...Array.from(prefix, (ch) => ({ ch, flags: {} as RunFlags })));
     const maxChars = Math.max(8, Math.floor(USABLE_W / (size * CHAR_ADVANCE)));
     wrapChars(chars, maxChars).forEach((line) => emitLine(size, lineRuns(line)));
+  };
+  const emitTable = (rows: { header: boolean; cells: RunPart[][] }[]): void => {
+    const columns = Math.max(1, ...rows.map((row) => row.cells.length));
+    const lens = new Array(columns).fill(3);
+    rows.forEach((row) => row.cells.forEach((cell, i) => {
+      const text = flattenChars(cell).map((c) => c.ch).join('');
+      lens[i] = Math.max(lens[i], Math.min(text.length, 40));
+    }));
+    const total = lens.reduce((a, b) => a + b, 0);
+    const minWidth = 50;
+    let colWidths = lens.map((l) => Math.max(minWidth, (USABLE_W * l) / total));
+    const sumW = colWidths.reduce((a, b) => a + b, 0);
+    if (sumW > USABLE_W) colWidths = colWidths.map((w) => (w * USABLE_W) / sumW);
+
+    rows.forEach((row) => {
+      const cellLineLists = colWidths.map((width, i) => {
+        const chars = flattenChars(row.cells[i] ?? []);
+        const maxChars = Math.max(4, Math.floor((width - CELL_PAD * 2) / (TABLE_FONT_SIZE * CHAR_ADVANCE)));
+        return wrapChars(chars, maxChars).map((line) => lineRuns(line));
+      });
+      const lineCount = Math.max(1, ...cellLineLists.map((lines) => lines.length));
+      const rowHeight = lineCount * lineHeight(TABLE_FONT_SIZE) + CELL_PAD * 2;
+      ensureSpace(rowHeight);
+      pages[pages.length - 1].push({ kind: 'table-row', header: row.header, colWidths, cellLineLists, rowHeight });
+      cursorY -= rowHeight;
+    });
   };
 
   blocks.forEach((block) => {
@@ -191,16 +229,16 @@ export async function htmlToPdfBytes(html: string): Promise<Uint8Array> {
     } else if (block.kind === 'listitem') {
       emitWrapped(block.parts, 11, block.prefix);
       cursorY -= 2;
-    } else if (block.kind === 'table-row') {
-      const parts: RunPart[] = [];
-      block.cells.forEach((cell, index) => {
-        if (index) parts.push({ kind: 'text', text: ' | ', flags: {} });
-        parts.push(...cell);
-      });
-      emitWrapped(parts, 10);
+    } else if (block.kind === 'table') {
+      emitTable(block.rows);
+      // O bloco da tabela devolve `cursorY` no "fundo da caixa" da última
+      // linha, não numa posição de baseline como os demais itens de texto —
+      // sem essa folga extra, o próximo parágrafo desenha suas ascendentes
+      // sobre a última linha da tabela.
+      emitGap(10);
     } else if (block.kind === 'rule') {
-      ensureSpace(11);
-      pages[pages.length - 1].push({ size: 0, runs: [] });
+      ensureSpace(lineHeight(11));
+      pages[pages.length - 1].push({ kind: 'rule' });
       cursorY -= 8;
     }
   });
@@ -215,26 +253,52 @@ export async function htmlToPdfBytes(html: string): Promise<Uint8Array> {
   const catalog = writer.addObject(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
 
   const pageIds: number[] = [];
-  pages.forEach((linesOnPage) => {
+  pages.forEach((itemsOnPage) => {
     let y = PAGE_H - MARGIN;
     let content = '';
-    linesOnPage.forEach((line) => {
-      if (line.size === 0) {
+    itemsOnPage.forEach((item) => {
+      if (item.kind === 'gap') {
+        y -= item.height;
+        return;
+      }
+      if (item.kind === 'rule') {
         content += `q 0.6 0.6 0.6 rg ${MARGIN} ${(y - 4).toFixed(2)} ${USABLE_W.toFixed(2)} 0.75 re f Q `;
         y -= lineHeight(11);
         return;
       }
+      if (item.kind === 'table-row') {
+        const top = y;
+        const bottom = y - item.rowHeight;
+        const tableWidth = item.colWidths.reduce((a, b) => a + b, 0);
+        if (item.header) content += `q 0.87 0.91 0.95 rg ${MARGIN} ${bottom.toFixed(2)} ${tableWidth.toFixed(2)} ${item.rowHeight.toFixed(2)} re f Q `;
+        let x = MARGIN;
+        item.colWidths.forEach((width, i) => {
+          content += `q 0.6 0.6 0.6 RG 0.5 w ${x.toFixed(2)} ${bottom.toFixed(2)} ${width.toFixed(2)} ${item.rowHeight.toFixed(2)} re S Q `;
+          let ty = top - CELL_PAD - TABLE_FONT_SIZE * 0.85;
+          (item.cellLineLists[i] ?? []).forEach((lineRunsArr) => {
+            content += `BT ${(x + CELL_PAD).toFixed(2)} ${ty.toFixed(2)} Td `;
+            lineRunsArr.forEach((run) => {
+              content += `/${fontNameFor(run.flags)} ${TABLE_FONT_SIZE} Tf (${pdfEscape(toWinAnsiByteString(run.text))}) Tj `;
+            });
+            content += 'ET ';
+            ty -= lineHeight(TABLE_FONT_SIZE);
+          });
+          x += width;
+        });
+        y -= item.rowHeight;
+        return;
+      }
       content += `BT ${MARGIN} ${y.toFixed(2)} Td `;
       let x = MARGIN;
-      line.runs.forEach((run) => {
-        content += `/${fontNameFor(run.flags)} ${line.size} Tf (${pdfEscape(toWinAnsiByteString(run.text))}) Tj `;
-        const width = run.text.length * line.size * CHAR_ADVANCE;
+      item.runs.forEach((run) => {
+        content += `/${fontNameFor(run.flags)} ${item.size} Tf (${pdfEscape(toWinAnsiByteString(run.text))}) Tj `;
+        const width = run.text.length * item.size * CHAR_ADVANCE;
         if (run.flags.underline) content += `q 0 0 0 rg ${x.toFixed(2)} ${(y - 1.5).toFixed(2)} ${width.toFixed(2)} 0.5 re f Q `;
-        if (run.flags.strike) content += `q 0 0 0 rg ${x.toFixed(2)} ${(y + line.size * 0.3).toFixed(2)} ${width.toFixed(2)} 0.5 re f Q `;
+        if (run.flags.strike) content += `q 0 0 0 rg ${x.toFixed(2)} ${(y + item.size * 0.3).toFixed(2)} ${width.toFixed(2)} 0.5 re f Q `;
         x += width;
       });
       content += 'ET ';
-      y -= lineHeight(line.size);
+      y -= lineHeight(item.size);
     });
     const contentId = writer.addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
     const pageId = writer.addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources ${resources} 0 R /Contents ${contentId} 0 R >>`);
