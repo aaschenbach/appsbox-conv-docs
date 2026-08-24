@@ -11,8 +11,8 @@ interface JSZipInstance {
   generateAsync(options: { type: 'uint8array' }): Promise<Uint8Array>;
 }
 
-type RunFlags = { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; code?: boolean };
-type RunPart =
+export type RunFlags = { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; code?: boolean };
+export type RunPart =
   | { kind: 'text'; text: string; flags: RunFlags }
   | { kind: 'break' }
   | { kind: 'hyperlink'; href: string; parts: RunPart[] };
@@ -61,7 +61,7 @@ class RelBuilder {
   }
 }
 
-function collectRuns(node: Node, flags: RunFlags): RunPart[] {
+export function collectRuns(node: Node, flags: RunFlags): RunPart[] {
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent ?? '';
     return text ? [{ kind: 'text', text, flags }] : [];

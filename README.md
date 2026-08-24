@@ -1,8 +1,8 @@
 # AppsBox Conversor de Documentos
 
-PWA de conversão local de TXT, Markdown, HTML e DOCX para HTML, TXT, Markdown
-ou DOCX. Os documentos nunca são enviados ao backend; o único serviço é o
-contador global agregado. O produto é publicado em
+PWA de conversão local de TXT, Markdown, HTML, DOCX e PDF para HTML, TXT,
+Markdown, DOCX ou PDF. Os documentos nunca são enviados ao backend; o único
+serviço é o contador global agregado. O produto é publicado em
 <https://docs.appsbox.com.br>.
 
 ## Desenvolvimento
@@ -19,20 +19,28 @@ node --check public/service-worker.js
 
 O frontend é HTML, CSS e TypeScript estrito, compilado para `dist/`. A
 conversão ocorre no navegador com `File.text()`/`File.arrayBuffer()` e
-`DOMParser`; DOCX é lido e gravado com JSZip (`public/vendor/jszip.js`, MIT,
-vendorizado localmente, sem CDN). Não há engine remota nem upload. O backend
-local roda em `127.0.0.1:9700`.
+`DOMParser`; DOCX é lido e gravado com JSZip (`public/vendor/jszip.js`, MIT);
+PDF é gerado por um escritor próprio e lido com pdf.js (Mozilla, Apache-2.0,
+`public/vendor/pdfjs/`, carregado sob demanda). Tudo vendorizado localmente,
+sem CDN. Não há engine remota nem upload. O backend local roda em
+`127.0.0.1:9700`.
 
 ## Estrutura
 
 ```text
-src/       TypeScript do frontend, conversão local e leitor/gravador DOCX
-public/    shell, PWA, estilos, logo e JSZip vendorizado
+src/       TypeScript do frontend, conversão local, DOCX e PDF
+public/    shell, PWA, estilos, logo, bibliotecas vendorizadas e páginas de SEO
 backend/   contador Python + SQLite
-scripts/   start, stop e deploy
+scripts/   start, stop, deploy e geração das páginas de SEO
 deploy/    modelos systemd e Apache
-tests/     fixtures, testes e round trip DOCX↔HTML
+tests/     fixtures, testes automatizados e notas de verificação manual
 ```
+
+Sempre que um formato ou par de conversão novo for adicionado, seguir o
+processo fixado em [AGENTS.md](AGENTS.md) ("Processo para novos formatos ou
+pares de conversão"): implementar 100% no navegador, testar em duas camadas,
+documentar limites de fidelidade, rodar `npm run generate-seo` e só então
+fazer deploy/push.
 
 `dist/`, `node_modules/`, `.run/`, `__pycache__/`, SQLite e releases são
 artefatos operacionais e não são versionados.
@@ -59,8 +67,8 @@ sudo apache2ctl configtest
 O modelo de serviço e VirtualHost está em `deploy/`. O deploy compila, publica
 uma release imutável, alterna `current` atomicamente e valida a URL pública.
 Consulte o [PRD](PRD_AppsBox_Conversor_de_Documentos.md) para o escopo exato;
-não anuncie PDF, OCR, outros formatos Office (XLS/XLSX, PPT/PPTX) ou EPUB
-nesta versão — apenas TXT, Markdown, HTML e DOCX.
+não anuncie OCR, outros formatos Office (XLS/XLSX, PPT/PPTX, ODT/ODS/ODP,
+RTF) ou EPUB nesta versão — apenas TXT, Markdown, HTML, DOCX e PDF.
 
 ## Privacidade
 
