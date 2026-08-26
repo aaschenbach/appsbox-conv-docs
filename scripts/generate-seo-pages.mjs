@@ -19,6 +19,25 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = path.join(ROOT, 'public', 'converter');
 const BASE_URL = 'https://docs.appsbox.com.br';
+const SIBLING = {
+  url: 'https://images.appsbox.com.br/',
+  name: 'AppsBox Conversor de Imagens',
+  blurb: 'faz JPEG, PNG e WebP com redimensionamento — também 100% no navegador',
+};
+const CROSS_PROMO = `<section class="cross-promo"><p><strong>Precisa converter imagens?</strong> O <strong>${SIBLING.name}</strong> ${SIBLING.blurb}.</p><a class="cross-cta" href="${SIBLING.url}">Abrir Conversor de Imagens</a></section>`;
+
+function ogHead({ title, description, url, ogType }) {
+  return `  <meta property="og:type" content="${ogType}">
+  <meta property="og:site_name" content="AppsBox">
+  <meta property="og:title" content="${escapeHtml(title)} · AppsBox">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${url}">
+  <meta property="og:image" content="${BASE_URL}/assets/appsboxconvdocslogo.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(title)} · AppsBox">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${BASE_URL}/assets/appsboxconvdocslogo.png">`;
+}
 
 // Fonte de verdade dos formatos: mantenha em sincronia com InputKind/OutputKind
 // em src/main.ts. `textOnlyInput`/`textOnlyOutput` documentam limites reais de
@@ -71,6 +90,7 @@ function pagesData() {
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/style.css?release=__RELEASE__">
+${ogHead({ title, description, url, ogType: 'article' })}
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>${escapeHtml(title)} · AppsBox</title>
 </head>
@@ -97,6 +117,7 @@ function pagesData() {
       <div class="convert-links">${relatedLinks}</div>
       <p><a href="/converter/">Ver todas as conversões</a> · <a href="/">Voltar ao conversor</a></p>
     </section>
+    ${CROSS_PROMO}
   </main>
   <footer><a href="https://appsbox.com.br/sobre">Sobre</a><a href="https://appsbox.com.br/fale-conosco">Fale conosco</a><a href="https://appsbox.com.br/termos">Termos de Uso</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/cookies">Cookies</a><a href="https://appsbox.com.br/regras-de-conteudo">Regras de Conteúdo</a></footer>
 </body>
@@ -120,6 +141,7 @@ function hubHtml(pages) {
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/style.css?release=__RELEASE__">
+${ogHead({ title: 'Todas as conversões: TXT, Markdown, HTML, DOCX e PDF', description: 'Todas as conversões de documentos disponíveis: TXT, Markdown, HTML, DOCX e PDF, em qualquer direção, direto no navegador.', url: `${BASE_URL}/converter/`, ogType: 'website' })}
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>Todas as conversões: TXT, Markdown, HTML, DOCX e PDF · AppsBox</title>
 </head>
@@ -134,6 +156,7 @@ function hubHtml(pages) {
       <div class="convert-links">${links}</div>
       <p><a href="/">Voltar ao conversor</a></p>
     </section>
+    ${CROSS_PROMO}
   </main>
   <footer><a href="https://appsbox.com.br/sobre">Sobre</a><a href="https://appsbox.com.br/fale-conosco">Fale conosco</a><a href="https://appsbox.com.br/termos">Termos de Uso</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/cookies">Cookies</a><a href="https://appsbox.com.br/regras-de-conteudo">Regras de Conteúdo</a></footer>
 </body>
@@ -182,7 +205,6 @@ patchIndexHtml(pages);
 const today = new Date().toISOString().slice(0, 10);
 const sitemapUrls = [
   { loc: `${BASE_URL}/`, lastmod: today },
-  { loc: `${BASE_URL}/cookies/`, lastmod: today },
   { loc: `${BASE_URL}/converter/`, lastmod: today },
   ...pages.map((page) => ({ loc: page.url, lastmod: today })),
 ];

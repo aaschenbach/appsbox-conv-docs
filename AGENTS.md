@@ -110,13 +110,15 @@ nomes.
 ## Publicação
 
 O deploy oficial usa o checkout git em
-`/mnt/dados/projetos/appsbox-conv-documentos` (remoto `origin` apontando para
-o GitHub do projeto), publica em `/var/www/appsbox-conv-documentos/releases/`,
-alterna `current` atomicamente e mantém o contador em `127.0.0.1:9700`. Nunca
-abrir essa porta na internet. Antes de rodar `scripts/deploy.sh`, garantir que
-esse checkout está atualizado (`git fetch origin main && git status --short`)
-com o commit publicado em `origin/main` — não publicar a partir de
-`/home/aaschen/repo` diretamente.
+`/mnt/dados/projetos/appsbox-conv-documentos` (remoto `origin` apontando para o
+checkout de edição em `/home/aaschen/repo/appsbox-conv-docs`, que por sua vez
+publica em `origin/main` no GitHub), publica em
+`/var/www/appsbox-conv-documentos/releases/`, alterna `current` atomicamente e
+mantém o contador em `127.0.0.1:9700`. Nunca abrir essa porta na internet.
+Antes de rodar `scripts/deploy.sh`, garantir que esse checkout está atualizado
+(`git fetch origin main && git reset --hard origin/main && git status --short`)
+com o commit publicado — não publicar a partir de `/home/aaschen/repo`
+diretamente.
 
 Antes de alterar Apache, systemd, dados ou backup, ler o skill
 `vps-onboard-app` e comparar os arquivos do repositório com o estado real.

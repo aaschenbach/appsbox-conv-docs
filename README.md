@@ -77,9 +77,14 @@ corpo exatamente `{}`. Não recebe documentos, nomes, extensões, tamanhos,
 hashes, IP funcional ou identificadores. A falha do contador não impede o
 download.
 
+## Produtos relacionados
+
+O [AppsBox Conversor de Imagens](https://images.appsbox.com.br) segue a mesma
+arquitetura para JPEG, PNG e WebP. Os dois produtos fazem crosslink recíproco
+na home e nas páginas de SEO.
+
 ## Documentação
 
 - [AGENTS.md](AGENTS.md): regras de contribuição, segurança e publicação;
 - [PRD](PRD_AppsBox_Conversor_de_Documentos.md): fonte de verdade funcional;
-- [documentação OCI](/home/ubuntu/dados/oci/docs/appsbox-conv-documentos.md):
-  estado operacional, Apache, serviço, backup e pendências externas.
+- documentação operacional da VPS: `/home/aaschen/repo/vps-docs`.
