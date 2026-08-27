@@ -23,7 +23,9 @@ da aplicação.
 
 - `.txt` — texto simples;
 - `.md` e `.markdown` — Markdown básico;
-- `.html` e `.htm` — HTML.
+- `.html` e `.htm` — HTML;
+- `.docx` — documento OOXML do Word;
+- `.pdf` — documento PDF.
 
 Arquivos de outras extensões são rejeitados pela interface e não são enviados.
 
@@ -31,11 +33,46 @@ Arquivos de outras extensões são rejeitados pela interface e não são enviado
 
 - **HTML:** TXT é encapsulado em `<pre>`, Markdown recebe conversão local de
   títulos, parágrafos, negrito e itálico; HTML existente é preservado como
-  texto de saída;
+  texto de saída; DOCX é lido e convertido para HTML equivalente; PDF é lido
+  (texto corrido) e encapsulado em `<pre>`;
 - **TXT:** HTML é convertido para texto usando `DOMParser`; TXT e Markdown são
-  mantidos como texto;
-- **Markdown:** Markdown, TXT e HTML são tratados como texto. HTML não é
-  reconstruído semanticamente para Markdown nesta versão.
+  mantidos como texto; DOCX e PDF seguem o mesmo caminho do texto extraído;
+- **Markdown:** Markdown, TXT, HTML, DOCX e PDF são tratados como texto. HTML
+  e DOCX não são reconstruídos semanticamente para Markdown nesta versão
+  (apenas encapsulados como HTML/texto de origem);
+- **DOCX:** TXT, Markdown, HTML e PDF são normalizados para um HTML
+  intermediário e então serializados como pacote OOXML mínimo
+  (`word/document.xml`, `styles.xml`, `numbering.xml`, `docProps/*`) gerado
+  com JSZip;
+- **PDF:** TXT, Markdown, HTML e DOCX são normalizados para o mesmo HTML
+  intermediário e então desenhados como um PDF próprio, monoespaçado
+  (Courier), com paginação A4.
+
+A conversão para/de DOCX é feita por um leitor/gravador OOXML escrito à mão
+em `src/docx.ts`, sem Pandoc, LibreOffice ou serviço remoto. Ela preserva
+títulos (H1–H6), negrito, itálico, sublinhado, tachado, listas (com marcador
+ou numeradas), tabelas, hyperlinks e acentuação. Não preserva imagens,
+fontes, estilos customizados além dos títulos/lista padrão, cabeçalho/rodapé,
+notas de rodapé, comentários, controle de alterações, numeração multinível ou
+objetos incorporados — esses elementos são descartados silenciosamente na
+leitura e nunca gerados na escrita.
+
+A conversão para/de PDF é feita em `src/pdf.ts`. A **escrita** é um gerador
+PDF próprio (objetos PDF montados à mão: catálogo, páginas, fontes padrão,
+fluxo de conteúdo, tabela xref) que usa as 4 variantes de Courier
+(monoespaçada, sem incorporar fonte) para poder quebrar linha e paginar por
+contagem de caracteres — títulos, negrito, itálico e listas são preservados,
+mas o layout visual é monoespaçado, não uma réplica do documento de origem;
+tabelas são desenhadas como uma grade real (bordas, largura de coluna
+proporcional ao conteúdo mais longo de cada coluna, cabeçalho com fundo
+sombreado, quebra de linha por célula e nova página entre linhas quando
+necessário), mas o cabeçalho não se repete quando a tabela atravessa uma
+quebra de página; não há links clicáveis, sublinhado real ou imagens no PDF
+gerado (sublinhado/tachado são desenhados como um traço). A **leitura** usa
+pdf.js (Mozilla, Apache-2.0, vendorizado em
+`public/vendor/pdfjs/`, carregado sob demanda) para extrair texto corrido do
+PDF de origem via `getTextContent`; não reconstrói títulos, tabelas, listas
+ou links do PDF original.
 
 A conversão é sequencial por arquivo. Cada resultado tem download individual;
 não há ZIP, histórico, edição, pré-visualização avançada ou processamento em
@@ -56,23 +93,42 @@ paralelo.
 
 Não estão implementados nem podem ser anunciados nesta versão:
 
-- DOC/DOCX, ODT/ODS/ODP, RTF, EPUB;
-- XLS/XLSX/CSV e apresentações;
-- PDF, OCR e PDF → Office;
-- macros, JavaScript de documentos, objetos ativos ou arquivos protegidos;
+- DOC binário (`.doc` legado), ODT/ODS/ODP, RTF, EPUB;
+- XLS/XLSX/CSV e apresentações (PPT/PPTX);
+- OCR (extração de texto de imagem escaneada dentro de um PDF);
+- macros, JavaScript de documentos, objetos ativos, PDFs criptografados ou
+  assinados digitalmente;
 - engine WebAssembly, Pandoc, LibreOffice ou conversão remota;
-- preservação de layout, fontes, imagens, tabelas, paginação ou metadados de
-  formatos complexos;
+- em DOCX: imagens, fontes, estilos customizados, cabeçalho/rodapé, notas de
+  rodapé, comentários, controle de alterações, numeração multinível e objetos
+  incorporados — a leitura os descarta e a escrita nunca os gera;
+- em PDF: imagens, fontes incorporadas/customizadas, layout visual
+  proporcional, links clicáveis, cabeçalho/rodapé de tabela repetido entre
+  páginas, formulários e assinaturas — a escrita gera texto monoespaçado
+  paginado (com tabelas em grade real, mas sem repetir o cabeçalho da tabela
+  numa quebra de página) e a leitura extrai apenas texto corrido;
 - conta, login, histórico, armazenamento de arquivos ou telemetria por arquivo.
 
-Uma expansão de formatos exige spike técnico, fixtures licenciados, revisão de
-licença e atualização deste PRD antes de alterar a interface.
+O suporte a DOCX e PDF (spikes concluídos) usa exclusivamente
+JSZip 3.10.1 (MIT, vendorizado em `public/vendor/jszip.js`) e pdf.js (Mozilla,
+Apache-2.0, vendorizado em `public/vendor/pdfjs/`, carregado sob demanda), sem
+CDN, mais as APIs nativas `DOMParser`/`XMLSerializer` do navegador; a escrita
+de PDF não depende de nenhuma biblioteca de terceiros (gerador próprio). Uma
+expansão além de TXT/Markdown/HTML/DOCX/PDF (novo formato de entrada/saída)
+exige spike técnico, fixtures licenciados, revisão de licença e atualização
+deste PRD antes de alterar a interface — ver AGENTS.md, seção "Processo para
+novos formatos ou pares de conversão".
 
 ## 4. Privacidade e segurança
 
-O arquivo é lido com `File.text()` e processado com `DOMParser` no navegador.
-HTML de entrada nunca é inserido como interface da aplicação durante a análise;
-o resultado HTML é apenas um arquivo para download. O backend recebe somente:
+O arquivo é lido com `File.text()` (TXT/Markdown/HTML) ou `File.arrayBuffer()`
+(DOCX/PDF) e processado com `DOMParser`/JSZip/pdf.js no navegador; o DOCX ou
+PDF gerado na saída é montado localmente (JSZip ou o gerador PDF próprio) e
+baixado via `Blob`/`URL.createObjectURL`, sem passar pelo backend em nenhum
+momento. pdf.js só é buscado (via `import()` dinâmico, do próprio domínio,
+nunca de CDN) quando o usuário efetivamente converte um PDF. HTML de entrada
+nunca é inserido como interface da aplicação durante a análise; o resultado
+HTML é apenas um arquivo para download. O backend recebe somente:
 
 ```http
 GET  /api/count
@@ -94,18 +150,28 @@ Não há CDN, origem externa, upload ou rota de conversão no servidor.
 
 ```text
 src/main.ts                         interface e conversão local
-public/index.html                   shell PWA
+src/docx.ts                         leitor/gravador OOXML (DOCX) via JSZip
+src/pdf.ts                          gerador PDF próprio + leitor via pdf.js
+public/index.html                   shell PWA + blocos seo-links/seo-jsonld
 public/style.css                    estilos responsivos e temas
 public/manifest.webmanifest         manifesto instalável
 public/service-worker.js            cache do shell
 public/assets/appsboxconvdocslogo.png
+public/vendor/jszip.js              JSZip 3.10.1 (MIT), vendorizado
+public/vendor/pdfjs/                pdf.js 4.10.38 (Apache-2.0), vendorizado
+public/converter/<par>/index.html   páginas de SEO por par de conversão
+public/converter/index.html         hub de todas as conversões
+public/sitemap.xml                  gerado por scripts/generate-seo-pages.mjs
 backend/counter.py                  contador HTTP + SQLite WAL
 scripts/start.sh                    inicialização do contador
 scripts/stop.sh                     parada segura do contador
 scripts/deploy.sh                   build e publicação atômica
+scripts/generate-seo-pages.mjs      gera páginas de conversão, hub, sitemap
+                                     e os blocos seo-links/seo-jsonld
 deploy/*.service                    modelo systemd
 deploy/*.conf                       modelo Apache
-tests/                              reservado para fixtures e testes futuros
+tests/docx.test.mjs                 round trip DOCX↔HTML (node --test + jsdom)
+tests/pdf.test.mjs                  validação estrutural do PDF gerado
 ```
 
 `dist/`, `node_modules/`, `.run/`, `__pycache__/` e bancos SQLite são artefatos
@@ -119,10 +185,28 @@ Requisitos: Node.js, npm e Python 3.
 npm ci
 npm run check
 npm run build
+npm test
 python3 -m py_compile backend/counter.py
 python3 -m json.tool public/manifest.webmanifest >/dev/null
 node --check public/service-worker.js
 ```
+
+`npm test` roda `tests/docx.test.mjs` e `tests/pdf.test.mjs` sob `node --test`,
+usando `jsdom` (só em tempo de teste, nunca embarcado no navegador) para
+fornecer `DOMParser` fora do browser. O DOCX é validado por round trip
+completo (HTML↔DOCX), incluindo documentos com estilo
+`ListBullet`/`ListNumber` (o padrão gerado pelo próprio Word e por
+bibliotecas como `python-docx`, sem `numPr` explícito). O PDF é validado
+estruturalmente (cabeçalho `%PDF`, `%%EOF`, fontes, paginação); a leitura
+(pdf.js) e a fidelidade fina do texto extraído/gerado são verificadas
+manualmente com `pypdf`/`python-docx` como leitores independentes e com
+Playwright contra a UI real antes de cada deploy — ver AGENTS.md, "Processo
+para novos formatos ou pares de conversão".
+
+Depois de qualquer mudança na matriz de formatos, rodar
+`npm run generate-seo` e commitar o resultado (`public/converter/*`,
+`public/sitemap.xml` e os blocos `seo-links`/`seo-jsonld` em
+`public/index.html`).
 
 O TypeScript é compilado para `dist/main.js`. Antes de qualquer commit, manter
 UTF-8 sem BOM e preservar todas as acentuações em português.
@@ -165,15 +249,21 @@ contador local. A porta 9700 não é pública.
 
 ## 8. Cache e offline
 
-O service worker armazena o shell, CSS, JavaScript, manifesto e logo. O Apache
-não mantém cache persistente para `index.html`, manifesto e service worker; CSS
+O service worker pré-armazena o shell essencial: HTML, CSS, `main.js`,
+`docx.js`, `pdf.js`, `vendor/jszip.js`, manifesto e logo. Os arquivos de
+`public/vendor/pdfjs/` (leitor de PDF, ~4 MB com `cmaps`/`standard_fonts`)
+não entram no pré-cache — são buscados sob demanda na primeira conversão de
+PDF e então ficam em cache oportunisticamente pelo mesmo service worker, para
+não pesar o carregamento inicial de quem nunca converte PDF. O Apache não
+mantém cache persistente para `index.html`, manifesto e service worker; CSS
 e JavaScript recebem cache de um dia. Os arquivos do usuário e resultados não
 entram no Cache Storage e URLs temporárias devem ser liberadas pela aplicação
 quando a fila for limpa.
 
 Offline significa que a interface e a conversão deste MVP podem continuar após
-o shell ter sido carregado. Não significa que engines Office ou OCR estejam
-disponíveis.
+o shell ter sido carregado — incluindo DOCX e PDF, uma vez que `jszip.js` e
+`pdfjs` (depois do primeiro uso) já estejam em cache. Não significa que
+engines Office completas ou OCR estejam disponíveis.
 
 ## 9. Backup e recuperação
 
@@ -204,11 +294,18 @@ curl https://docs.appsbox.com.br/health
 
 ## 11. Próximas versões
 
-O próximo trabalho permitido é um spike isolado, sem alterar a promessa
-pública, para avaliar uma engine local de documentos estruturados. Cada novo
-formato deverá incluir fixtures com acentos, conteúdo malformado e casos de
-perda de fidelidade, além de testes de privacidade e offline. Sem aprovação do
-spike, a matriz atual permanece congelada.
+Os spikes de DOCX e PDF foram concluídos e entregues (24/08/2026): DOCX via
+leitor/gravador OOXML próprio (`tests/docx.test.mjs`, validado contra
+`python-docx`); PDF via gerador próprio + leitor pdf.js (`tests/pdf.test.mjs`,
+validado contra `pypdf` e contra um PDF gerado por outra ferramenta
+independente). A matriz de formatos permanece congelada em TXT, Markdown,
+HTML, DOCX e PDF. Qualquer novo formato (ODT, RTF, planilhas, apresentações,
+OCR etc.) exige um spike isolado equivalente, sem alterar a promessa pública
+até aprovação, seguindo o processo fixado em AGENTS.md ("Processo para novos
+formatos ou pares de conversão"): implementação 100% local, testes em duas
+camadas (automatizado + verificação cruzada independente), documentação de
+limites de fidelidade, geração das páginas de SEO (`npm run generate-seo`) e
+atualização deste PRD antes de mudar a interface.
 
 ## 12. Documentos relacionados
 

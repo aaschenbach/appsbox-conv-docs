@@ -4,15 +4,38 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#102a43">
-  <meta name="description" content="Conversão local de TXT, Markdown e HTML.">
+  <meta name="description" content="Conversão local de TXT, Markdown, HTML, DOCX e PDF.">
   <link rel="icon" type="image/png" href="/assets/appsboxconvdocslogo.png">
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?release=__RELEASE__">
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>Conversor de Documentos · AppsBox</title>
+  <link rel="canonical" href="https://docs.appsbox.com.br/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="AppsBox">
+  <meta property="og:title" content="Conversor de Documentos · AppsBox">
+  <meta property="og:description" content="Conversão local de TXT, Markdown, HTML, DOCX e PDF, direto no navegador e sem upload.">
+  <meta property="og:url" content="https://docs.appsbox.com.br/">
+  <meta property="og:image" content="https://docs.appsbox.com.br/assets/appsboxconvdocslogo.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Conversor de Documentos · AppsBox">
+  <meta name="twitter:description" content="Conversão local de TXT, Markdown, HTML, DOCX e PDF, direto no navegador e sem upload.">
+  <meta name="twitter:image" content="https://docs.appsbox.com.br/assets/appsboxconvdocslogo.png">
+  <!-- seo-jsonld:start --><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Conversor de Documentos AppsBox","url":"https://docs.appsbox.com.br/","applicationCategory":"Utility","operatingSystem":"Any (navegador web)","offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"},"featureList":["TXT para Markdown (txt2md)","TXT para HTML (txt2html)","TXT para DOCX (txt2docx)","TXT para PDF (txt2pdf)","Markdown para TXT (md2txt)","Markdown para HTML (md2html)","Markdown para DOCX (md2docx)","Markdown para PDF (md2pdf)","HTML para TXT (html2txt)","HTML para Markdown (html2md)","HTML para DOCX (html2docx)","HTML para PDF (html2pdf)","DOCX para TXT (docx2txt)","DOCX para Markdown (docx2md)","DOCX para HTML (docx2html)","DOCX para PDF (docx2pdf)","PDF para TXT (pdf2txt)","PDF para Markdown (pdf2md)","PDF para HTML (pdf2html)","PDF para DOCX (pdf2docx)"]}</script><!-- seo-jsonld:end -->
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NNMWVGR8');</script>
+<!-- End Google Tag Manager -->
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NNMWVGR8"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
   <header class="site-header">
     <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro">☾</button></div>
   </header>
@@ -20,17 +43,31 @@
     <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Conversor de documentos</h1><p>Privado e direto no seu dispositivo.</p></div><p class="availability">● Offline após o primeiro carregamento</p></section>
     <section class="card" aria-labelledby="converter-title">
       <div class="card-heading"><h2 id="converter-title">Documentos</h2><p id="file-summary" class="muted">Nenhum arquivo selecionado</p></div>
-      <label id="dropzone" class="dropzone" for="files"><span class="drop-icon">＋</span><span><strong>Adicionar documentos</strong> <em>adiciona à seleção atual</em></span><small>TXT, Markdown ou HTML · múltiplos arquivos</small><input id="files" type="file" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html" multiple></label>
+      <label id="dropzone" class="dropzone" for="files"><span class="drop-icon">＋</span><span><strong>Adicionar documentos</strong> <em>adiciona à seleção atual</em></span><small>TXT, Markdown, HTML, DOCX ou PDF · múltiplos arquivos</small><input id="files" type="file" accept=".txt,.md,.markdown,.html,.htm,.docx,.pdf,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" multiple></label>
       <div id="queue" class="queue"></div>
       <form id="converter-form">
-        <fieldset class="output-field"><legend>Saída</legend><label>Formato<select id="output"><option value="html">HTML — preservar leitura no navegador</option><option value="txt">TXT — texto simples</option><option value="md">Markdown — estrutura leve</option></select><small>Escolha o formato dos arquivos baixados.</small></label></fieldset>
+        <fieldset class="output-field"><legend>Saída</legend><label>Formato<select id="output"><option value="html">HTML — preservar leitura no navegador</option><option value="txt">TXT — texto simples</option><option value="md">Markdown — estrutura leve</option><option value="docx">DOCX — documento do Word</option><option value="pdf">PDF — documento portátil</option></select><small>Escolha o formato dos arquivos baixados.</small></label></fieldset>
         <div class="actions"><button class="primary" type="submit">Converter documentos</button><button id="reset" type="button" class="secondary" title="Remove os documentos e resultados desta tela">Limpar seleção</button></div>
       </form>
       <p id="status" class="status" role="status" aria-live="polite">Pronto para converter.</p><div id="results" class="results" aria-live="polite"></div>
     </section>
     <section class="trust"><div><strong>Conversões realizadas</strong><span id="conversion-count">—</span></div><p>Contagem total. Nenhum arquivo ou identificador é coletado.</p></section>
+    <section class="card">
+      <h2>Conversões disponíveis</h2>
+      <p class="muted">Cada link já abre o conversor com o formato de saída certo selecionado.</p>
+      <div class="convert-links"><!-- seo-links:start --><a href="/converter/txt-para-md/">TXT → Markdown <small>(txt2md)</small></a><a href="/converter/txt-para-html/">TXT → HTML <small>(txt2html)</small></a><a href="/converter/txt-para-docx/">TXT → DOCX <small>(txt2docx)</small></a><a href="/converter/txt-para-pdf/">TXT → PDF <small>(txt2pdf)</small></a><a href="/converter/md-para-txt/">Markdown → TXT <small>(md2txt)</small></a><a href="/converter/md-para-html/">Markdown → HTML <small>(md2html)</small></a><a href="/converter/md-para-docx/">Markdown → DOCX <small>(md2docx)</small></a><a href="/converter/md-para-pdf/">Markdown → PDF <small>(md2pdf)</small></a><a href="/converter/html-para-txt/">HTML → TXT <small>(html2txt)</small></a><a href="/converter/html-para-md/">HTML → Markdown <small>(html2md)</small></a><a href="/converter/html-para-docx/">HTML → DOCX <small>(html2docx)</small></a><a href="/converter/html-para-pdf/">HTML → PDF <small>(html2pdf)</small></a><a href="/converter/docx-para-txt/">DOCX → TXT <small>(docx2txt)</small></a><a href="/converter/docx-para-md/">DOCX → Markdown <small>(docx2md)</small></a><a href="/converter/docx-para-html/">DOCX → HTML <small>(docx2html)</small></a><a href="/converter/docx-para-pdf/">DOCX → PDF <small>(docx2pdf)</small></a><a href="/converter/pdf-para-txt/">PDF → TXT <small>(pdf2txt)</small></a><a href="/converter/pdf-para-md/">PDF → Markdown <small>(pdf2md)</small></a><a href="/converter/pdf-para-html/">PDF → HTML <small>(pdf2html)</small></a><a href="/converter/pdf-para-docx/">PDF → DOCX <small>(pdf2docx)</small></a><!-- seo-links:end --></div>
+    </section>
+    <section class="cross-promo"><p><strong>Precisa converter imagens?</strong> O <strong>AppsBox Conversor de Imagens</strong> faz JPEG, PNG e WebP com redimensionamento — também 100% no navegador.</p><a class="cross-cta" href="https://images.appsbox.com.br/">Abrir Conversor de Imagens</a></section>
   </main>
-  <footer><a href="https://appsbox.com.br/">Início do AppsBox</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/termos">Termos</a><a href="mailto:contato@appsbox.com.br">Contato</a><span class="release-version">Release: <span id="release-version">desenvolvimento</span></span></footer>
-  <script type="module" src="/main.js"></script>
+  <aside id="pwa-install-prompt" class="pwa-install-prompt" aria-label="Instalar AppsBox Conversor de Documentos" hidden>
+    <p>Quer converter documentos mais rápido? Instale o AppsBox Conversor de Documentos neste dispositivo.</p>
+    <div>
+      <button id="pwa-install" class="primary" type="button">Instalar</button>
+      <button id="pwa-dismiss" class="secondary" type="button">Agora não</button>
+    </div>
+  </aside>
+  <footer><a href="https://appsbox.com.br/sobre">Sobre</a><a href="https://appsbox.com.br/fale-conosco">Fale conosco</a><a href="https://appsbox.com.br/termos">Termos de Uso</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/cookies">Cookies</a><a href="https://appsbox.com.br/regras-de-conteudo">Regras de Conteúdo</a><span class="release-version">Release: <span id="release-version">desenvolvimento</span></span></footer>
+  <script src="/vendor/jszip.js"></script>
+  <script type="module" src="/main.js?release=__RELEASE__"></script>
 </body>
 </html>

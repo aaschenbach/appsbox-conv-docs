@@ -1,7 +1,10 @@
 node_modules/
 dist/
+dist-release/
+dist_copy/
 .run/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 __pycache__/
+*.py[cod]

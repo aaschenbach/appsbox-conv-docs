@@ -1,7 +1,12 @@
+import { docxToHtml, htmlToDocxBytes } from './docx.js';
+import { htmlToPdfBytes, pdfToText } from './pdf.js';
 export {};
-type InputKind = 'txt' | 'md' | 'html';
-type OutputKind = 'txt' | 'md' | 'html';
+type TextKind = 'txt' | 'md' | 'html';
+type InputKind = TextKind | 'docx' | 'pdf';
+type OutputKind = TextKind | 'docx' | 'pdf';
 type Job = { file: File; kind: InputKind; output: OutputKind; state: string };
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const PDF_MIME = 'application/pdf';
 
 const input = document.querySelector<HTMLInputElement>('#files')!;
 const dropzone = document.querySelector<HTMLElement>('#dropzone')!;
@@ -13,12 +18,15 @@ const results = document.querySelector<HTMLElement>('#results')!;
 const count = document.querySelector<HTMLElement>('#conversion-count')!;
 const reset = document.querySelector<HTMLButtonElement>('#reset')!;
 const theme = document.querySelector<HTMLButtonElement>('#theme-toggle')!;
+const pwaInstallPrompt = document.querySelector<HTMLElement>('#pwa-install-prompt')!;
+const pwaInstallButton = document.querySelector<HTMLButtonElement>('#pwa-install')!;
+const pwaDismissButton = document.querySelector<HTMLButtonElement>('#pwa-dismiss')!;
 let jobs: Job[] = [];
 let busy = false;
 
 function kind(file: File): InputKind | null {
   const ext = file.name.toLowerCase().split('.').pop();
-  return ext === 'txt' ? 'txt' : ext === 'md' || ext === 'markdown' ? 'md' : ext === 'html' || ext === 'htm' ? 'html' : null;
+  return ext === 'txt' ? 'txt' : ext === 'md' || ext === 'markdown' ? 'md' : ext === 'html' || ext === 'htm' ? 'html' : ext === 'docx' ? 'docx' : ext === 'pdf' ? 'pdf' : null;
 }
 function outputExtension(value: OutputKind): string { return value; }
 function setStatus(value: string, active = false): void { statusEl.textContent = value; statusEl.classList.toggle('busy', active); }
@@ -152,7 +160,7 @@ function htmlToMarkdown(value: string): string {
   if (!blocks.length) addBlock(htmlInline(document.body));
   return `${blocks.join('\n\n')}\n`;
 }
-function convertText(text: string, from: InputKind, to: OutputKind): string {
+function convertText(text: string, from: TextKind, to: TextKind): string {
   if (to === 'txt') return from === 'html' ? new DOMParser().parseFromString(text, 'text/html').body.textContent ?? '' : text;
   if (to === 'html') return from === 'md' ? `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><body>${markdownToHtml(text)}</body></html>` : from === 'html' ? text : `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><body><pre>${escape(text)}</pre></body></html>`;
   if (from === 'md') return text;
@@ -164,15 +172,34 @@ function renderQueue(): void {
   document.querySelector('#file-summary')!.textContent = jobs.length ? `${jobs.length} documento(s) selecionado(s)` : 'Nenhum arquivo selecionado';
   jobs.forEach((job, index) => { const item = document.createElement('article'); item.className = 'file-item'; item.innerHTML = `<div><strong>${escape(job.file.name)}</strong><small>${job.kind.toUpperCase()} · ${formatBytes(job.file.size)}</small></div><button type="button" ${busy ? 'disabled' : ''}>Remover</button>`; item.querySelector('button')!.addEventListener('click', () => { jobs.splice(index, 1); renderQueue(); }); queue.append(item); });
 }
-function addFiles(files: FileList | File[]): void { const added = Array.from(files).map((file) => ({ file, kind: kind(file), output: output.value as OutputKind, state: 'Pronto' })).filter((job): job is Job => job.kind !== null); jobs.push(...added); renderQueue(); setStatus(added.length ? 'Pronto para converter.' : 'Selecione TXT, Markdown ou HTML.'); }
+function addFiles(files: FileList | File[]): void { const added = Array.from(files).map((file) => ({ file, kind: kind(file), output: output.value as OutputKind, state: 'Pronto' })).filter((job): job is Job => job.kind !== null); jobs.push(...added); renderQueue(); setStatus(added.length ? 'Pronto para converter.' : 'Selecione TXT, Markdown, HTML, DOCX ou PDF.'); }
 input.addEventListener('change', () => { addFiles(input.files ?? []); input.value = ''; });
 dropzone.addEventListener('dragover', (event) => { event.preventDefault(); dropzone.classList.add('over'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
 dropzone.addEventListener('drop', (event) => { event.preventDefault(); dropzone.classList.remove('over'); addFiles(event.dataTransfer?.files ?? []); });
 reset.addEventListener('click', () => { jobs = []; results.replaceChildren(); renderQueue(); setStatus('Pronto para converter.'); });
 theme.addEventListener('click', () => { const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; renderTheme(next); localStorage.setItem('appsbox-conv-documentos-theme', next); });
-form.addEventListener('submit', async (event) => { event.preventDefault(); if (busy || !jobs.length) { setStatus(jobs.length ? 'A conversão já está em andamento.' : 'Selecione ao menos um documento.'); return; } busy = true; renderQueue(); results.replaceChildren(); for (let index = 0; index < jobs.length; index += 1) { const job = jobs[index]; try { setStatus(`Lendo ${job.file.name} — ${index + 1} de ${jobs.length}`, true); const text = await job.file.text(); const converted = convertText(text, job.kind, output.value as OutputKind); const blob = new Blob([converted], { type: output.value === 'html' ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8' }); const link = document.createElement('a'); link.className = 'result-item'; link.download = `${job.file.name.replace(/\.[^.]+$/, '')}.${outputExtension(output.value as OutputKind)}`; link.href = URL.createObjectURL(blob); link.innerHTML = `<span>${escape(link.download)}</span><small>${formatBytes(blob.size)} · baixar</small>`; results.append(link); fetch('/api/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined); } catch { const error = document.createElement('p'); error.className = 'error'; error.textContent = `Não foi possível converter ${job.file.name}.`; results.append(error); } } busy = false; renderQueue(); setStatus('Conversão concluída. Seus documentos permaneceram neste dispositivo.'); });
+form.addEventListener('submit', async (event) => { event.preventDefault(); if (busy || !jobs.length) { setStatus(jobs.length ? 'A conversão já está em andamento.' : 'Selecione ao menos um documento.'); return; } busy = true; renderQueue(); results.replaceChildren(); for (let index = 0; index < jobs.length; index += 1) { const job = jobs[index]; try { setStatus(`Lendo ${job.file.name} — ${index + 1} de ${jobs.length}`, true); const text = job.kind === 'docx' ? await docxToHtml(await job.file.arrayBuffer()) : job.kind === 'pdf' ? await pdfToText(await job.file.arrayBuffer()) : await job.file.text(); const effectiveKind: TextKind = job.kind === 'docx' ? 'html' : job.kind === 'pdf' ? 'txt' : job.kind; const outputKind = output.value as OutputKind; const blob = outputKind === 'docx' ? new Blob([await htmlToDocxBytes(convertText(text, effectiveKind, 'html'))] as BlobPart[], { type: DOCX_MIME }) : outputKind === 'pdf' ? new Blob([await htmlToPdfBytes(convertText(text, effectiveKind, 'html'))] as BlobPart[], { type: PDF_MIME }) : new Blob([convertText(text, effectiveKind, outputKind)], { type: outputKind === 'html' ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8' }); const link = document.createElement('a'); link.className = 'result-item'; link.download = `${job.file.name.replace(/\.[^.]+$/, '')}.${outputExtension(outputKind)}`; link.href = URL.createObjectURL(blob); link.innerHTML = `<span>${escape(link.download)}</span><small>${formatBytes(blob.size)} · baixar</small>`; results.append(link); fetch('/api/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(async (response) => { if (response.ok) count.textContent = ((await response.json() as { total: number }).total).toLocaleString('pt-BR'); }).catch(() => undefined); } catch { const error = document.createElement('p'); error.className = 'error'; error.textContent = `Não foi possível converter ${job.file.name}.`; results.append(error); } } busy = false; renderQueue(); setStatus('Conversão concluída. Seus documentos permaneceram neste dispositivo.'); });
 function renderTheme(themeName: 'light' | 'dark'): void { document.documentElement.dataset.theme = themeName; theme.textContent = themeName === 'dark' ? '☀' : '☾'; theme.setAttribute('aria-label', themeName === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'); }
 const initialTheme = localStorage.getItem('appsbox-conv-documentos-theme') === 'dark' ? 'dark' : 'light'; renderTheme(initialTheme);
-fetch('/api/count').then(async (response) => { if (response.ok) count.textContent = String((await response.json() as { total: number }).total).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }).catch(() => undefined);
+
+const requestedOutput = new URLSearchParams(location.search).get('to');
+if (requestedOutput && Array.from(output.options).some((option) => option.value === requestedOutput)) output.value = requestedOutput;
+
+fetch('/api/count').then(async (response) => { if (response.ok) count.textContent = ((await response.json() as { total: number }).total).toLocaleString('pt-BR'); }).catch(() => undefined);
+
+type InstallChoice = { outcome: 'accepted' | 'dismissed' };
+type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<InstallChoice> };
+const PWA_VISITS_KEY = 'appsbox-conv-documentos-pwa-visits';
+const PWA_DISMISSED_KEY = 'appsbox-conv-documentos-pwa-dismissed';
+let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
+function dismissInstallPrompt(): void { sessionStorage.setItem(PWA_DISMISSED_KEY, '1'); pwaInstallPrompt.hidden = true; }
+async function installPwa(): Promise<void> { if (!deferredInstallPrompt) return; await deferredInstallPrompt.prompt(); const choice = await deferredInstallPrompt.userChoice; if (choice.outcome === 'dismissed') dismissInstallPrompt(); else pwaInstallPrompt.hidden = true; deferredInstallPrompt = null; }
+pwaDismissButton.addEventListener('click', dismissInstallPrompt);
+pwaInstallButton.addEventListener('click', () => void installPwa());
+const pwaVisits = Number(sessionStorage.getItem(PWA_VISITS_KEY) ?? '0') + 1;
+sessionStorage.setItem(PWA_VISITS_KEY, String(pwaVisits));
+const pwaInstallEligible = pwaVisits >= 2 && !sessionStorage.getItem(PWA_DISMISSED_KEY);
+window.addEventListener('beforeinstallprompt', (event: Event) => { const installEvent = event as BeforeInstallPromptEvent; installEvent.preventDefault(); deferredInstallPrompt = installEvent; pwaInstallPrompt.hidden = !pwaInstallEligible; });
+
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js?release=__RELEASE__').catch(() => undefined);
