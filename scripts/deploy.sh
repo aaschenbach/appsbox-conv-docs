@@ -12,7 +12,7 @@ npm run check
 npm run build
 install -d "$STAGING/assets" "$STAGING/vendor"
 install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js public/robots.txt public/sitemap.xml public/ads.txt "$STAGING/"
-JS_MODULES="main docx pdf text-formats afm-widths image csv rtf odt epub"
+JS_MODULES="main formats docx pdf text-formats afm-widths csv rtf odt epub"
 for m in $JS_MODULES; do install -m 0644 "dist/$m.js" "$STAGING/"; done
 install -m 0644 public/vendor/jszip.js "$STAGING/vendor/jszip.js"
 cp -a public/vendor/pdfjs "$STAGING/vendor/pdfjs"

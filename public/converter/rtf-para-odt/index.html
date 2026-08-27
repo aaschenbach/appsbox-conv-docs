@@ -20,26 +20,62 @@
   <meta name="twitter:title" content="Converter RTF para ODT online (rtf2odt) · AppsBox">
   <meta name="twitter:description" content="Converta RTF para ODT (rtf2odt) direto no navegador, sem upload e sem cadastro. Gratuito, privado e funciona offline após o primeiro carregamento.">
   <meta name="twitter:image" content="https://docs.appsbox.com.br/assets/appsboxconvdocslogo.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Início","item":"https://docs.appsbox.com.br/"},{"@type":"ListItem","position":2,"name":"Conversões","item":"https://docs.appsbox.com.br/converter/"},{"@type":"ListItem","position":3,"name":"RTF para ODT","item":"https://docs.appsbox.com.br/converter/rtf-para-odt/"}]},{"@type":"HowTo","name":"Como converter RTF para ODT","description":"Converta RTF para ODT (rtf2odt) direto no navegador, sem upload e sem cadastro. Gratuito, privado e funciona offline após o primeiro carregamento.","step":[{"@type":"HowToStep","position":1,"text":"Abra esta página — o par RTF → ODT já vem selecionado — e adicione um arquivo .rtf."},{"@type":"HowToStep","position":2,"text":"Clique em Converter."},{"@type":"HowToStep","position":3,"text":"Baixe o arquivo .odt gerado. Nenhum upload acontece."}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"A conversão de RTF para ODT envia meu arquivo para algum servidor?","acceptedAnswer":{"@type":"Answer","text":"Não. A conversão de RTF para ODT acontece inteiramente no seu navegador: o arquivo é lido e o resultado é montado no seu dispositivo. Só um contador agregado de conversões concluídas é registrado — nunca o arquivo, o nome ou o conteúdo."}},{"@type":"Question","name":"Preciso instalar algo, criar conta ou pagar?","acceptedAnswer":{"@type":"Answer","text":"Não. É uma página web gratuita, sem cadastro. Depois do primeiro carregamento ela funciona offline e pode ser instalada como aplicativo (PWA), se você quiser."}},{"@type":"Question","name":"Existe limite de tamanho ou de quantidade de arquivos?","acceptedAnswer":{"@type":"Answer","text":"Não há limite imposto pelo serviço; o limite prático é a memória do seu dispositivo. Vários arquivos .rtf podem ser convertidos de uma vez."}},{"@type":"Question","name":"O que é preservado ao converter RTF para ODT?","acceptedAnswer":{"@type":"Answer","text":"RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados."}}]},{"@type":"WebApplication","name":"Conversor de RTF para ODT · AppsBox","url":"https://docs.appsbox.com.br/converter/rtf-para-odt/","applicationCategory":"Utility","operatingSystem":"Any (navegador web)","offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}]}</script>
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>Converter RTF para ODT online (rtf2odt) · AppsBox</title>
 </head>
 <body>
   <header class="site-header">
-    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span></div>
+    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro">☾</button></div>
   </header>
   <main>
-    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Converter RTF para ODT</h1><p>Também conhecido como <strong>rtf2odt</strong> — direto no seu navegador.</p></div></section>
+    <nav class="breadcrumb" aria-label="Trilha"><a href="/">Início</a> › <a href="/converter/">Conversões</a> › <span>RTF para ODT</span></nav>
+    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Converter RTF para ODT</h1><p>Também conhecido como <strong>rtf2odt</strong> — direto no seu navegador, sem upload.</p></div></section>
+    <section class="card" id="converter-widget" data-locked="1" data-from="rtf" data-to="odt" aria-labelledby="converter-title">
+      <div class="card-heading"><h2 id="converter-title">Converter arquivos</h2><p id="file-summary" class="muted">Nenhum arquivo selecionado</p></div>
+      <label id="dropzone" class="dropzone" for="files"><span class="drop-icon">＋</span><span><strong>Adicionar arquivos</strong> <em>adiciona à seleção atual</em></span><small id="dropzone-hint">Arquivos .rtf · vários de uma vez</small><input id="files" type="file" accept=".rtf,application/rtf,text/rtf" multiple></label>
+      <div id="queue" class="queue"></div>
+      <form id="converter-form">
+        <p class="pair-fixed" aria-label="Conversão">RTF <span aria-hidden="true">→</span> ODT</p><select id="output" hidden><option value="odt">ODT</option></select>
+        <div class="actions"><button class="primary" type="submit">Converter</button><button id="reset" type="button" class="secondary" title="Remove os arquivos e resultados desta tela">Limpar</button><button id="open-options" type="button" class="secondary options-btn">Opções de saída…</button></div>
+      </form>
+
+      <dialog id="options-dialog" class="options-dialog">
+        <form method="dialog" id="options-form">
+          <h3>Opções de saída</h3>
+          <p id="options-none" class="muted" hidden>Este formato não tem opções de layout — o resultado é texto puro.</p>
+          <div class="options-group" data-for="pdf" hidden>
+            <p class="options-group-title">PDF</p>
+            <label>Fonte<select id="pdf-fontFamily"><option value="sans">Sans (Helvetica)</option><option value="serif">Serif (Times)</option><option value="mono">Mono (Courier)</option></select></label>
+            <label>Corpo<select id="pdf-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
+            <label>Entrelinha<select id="pdf-lineSpacing"><option value="1.2">Compacta</option><option value="1.45">Padrão</option><option value="1.7">Solta</option></select></label>
+            <label>Página<select id="pdf-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
+            <label>Margens<select id="pdf-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
+            <label class="options-check"><input type="checkbox" id="pdf-pageNumbers"> Número de página no rodapé</label>
+            <label class="options-check"><input type="checkbox" id="pdf-justify"> Justificar o texto</label>
+          </div>
+          <div class="options-group" data-for="docx" hidden>
+            <p class="options-group-title">DOCX</p>
+            <label>Fonte<select id="docx-fontFamily"><option>Calibri</option><option>Arial</option><option>Georgia</option><option>Times New Roman</option></select></label>
+            <label>Corpo<select id="docx-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
+            <label>Página<select id="docx-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
+            <label>Margens<select id="docx-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
+          </div>
+          <div class="options-actions"><button type="button" id="options-reset" class="secondary">Restaurar padrão</button><button type="submit" class="primary">Concluir</button></div>
+        </form>
+      </dialog>
+      <p id="status" class="status" role="status" aria-live="polite">Pronto para converter.</p><div id="results" class="results" aria-live="polite"></div>
+    </section>
     <section class="card">
       <p>Este conversor transforma texto formatado (RTF) em documento ODT do LibreOffice sem enviar o arquivo a nenhum servidor: a leitura e a montagem do resultado acontecem inteiramente no seu dispositivo, com download imediato.</p>
       <p><strong>Como converter RTF para ODT:</strong></p>
-      <ol>
-        <li>Abra o <a href="/?to=odt#converter-title">conversor de documentos</a> e adicione um arquivo .rtf;</li>
-        <li>Escolha <strong>ODT</strong> como formato de saída (já vem selecionado pelo link acima);</li>
-        <li>Clique em <strong>Converter documentos</strong> e baixe o arquivo .odt gerado.</li>
-      </ol>
+      <ol><li>Abra esta página — o par RTF → ODT já vem selecionado — e adicione um arquivo .rtf.</li><li>Clique em Converter.</li><li>Baixe o arquivo .odt gerado. Nenhum upload acontece.</li></ol>
       <p class="muted">RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados.</p>
       <p class="muted">Nenhum arquivo, nome ou conteúdo é enviado ao servidor — apenas um contador agregado de conversões concluídas.</p>
-      <p><a href="/?to=odt#converter-title">Converter RTF para ODT agora →</a></p>
+    </section>
+    <section class="card faq">
+      <h2>Perguntas frequentes</h2>
+      <details><summary>A conversão de RTF para ODT envia meu arquivo para algum servidor?</summary><p>Não. A conversão de RTF para ODT acontece inteiramente no seu navegador: o arquivo é lido e o resultado é montado no seu dispositivo. Só um contador agregado de conversões concluídas é registrado — nunca o arquivo, o nome ou o conteúdo.</p></details><details><summary>Preciso instalar algo, criar conta ou pagar?</summary><p>Não. É uma página web gratuita, sem cadastro. Depois do primeiro carregamento ela funciona offline e pode ser instalada como aplicativo (PWA), se você quiser.</p></details><details><summary>Existe limite de tamanho ou de quantidade de arquivos?</summary><p>Não há limite imposto pelo serviço; o limite prático é a memória do seu dispositivo. Vários arquivos .rtf podem ser convertidos de uma vez.</p></details><details><summary>O que é preservado ao converter RTF para ODT?</summary><p>RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados.</p></details>
     </section>
     <section class="card">
       <h2>Outras conversões</h2>
@@ -49,5 +85,7 @@
     <section class="cross-promo"><p><strong>Precisa converter imagens?</strong> O <strong>AppsBox Conversor de Imagens</strong> faz JPEG, PNG e WebP com redimensionamento — também 100% no navegador.</p><a class="cross-cta" href="https://images.appsbox.com.br/">Abrir Conversor de Imagens</a></section>
   </main>
   <footer><a href="https://appsbox.com.br/sobre">Sobre</a><a href="https://appsbox.com.br/fale-conosco">Fale conosco</a><a href="https://appsbox.com.br/termos">Termos de Uso</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/cookies">Cookies</a><a href="https://appsbox.com.br/regras-de-conteudo">Regras de Conteúdo</a></footer>
+  <script src="/vendor/jszip.js"></script>
+  <script type="module" src="/main.js?release=__RELEASE__"></script>
 </body>
 </html>

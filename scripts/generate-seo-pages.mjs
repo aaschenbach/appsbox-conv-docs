@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 // Gera public/converter/<slug>/index.html, o hub public/converter/index.html,
-// public/sitemap.xml e os blocos marcados (seo-links / seo-jsonld) dentro de
-// public/index.html — tudo a partir da MESMA matriz de formatos usada pela
-// aplicação (ver src/main.ts: InputKind/OutputKind). Não inclui nenhum
-// formato que a aplicação não converta de fato — ver PRD, seção "Limites
-// explícitos". Rodar depois de qualquer mudança na matriz de formatos:
+// public/sitemap.xml e os blocos marcados (seo-links / seo-jsonld / converter)
+// dentro de public/index.html — tudo a partir da MESMA matriz de formatos usada
+// pela aplicação (src/formats.ts, compilado em dist/formats.js). Rodar depois de
+// qualquer mudança na matriz ou no markup do conversor:
 //
-//   node scripts/generate-seo-pages.mjs
+//   npm run generate-seo        (roda `npm run build` antes)
 //
-// Isso é o padrão deste repositório: toda vez que um novo formato/par de
-// conversão é adicionado à aplicação, este script deve ser executado (e seu
-// resultado commitado) antes do deploy. Ver AGENTS.md, seção "Processo para
-// novos formatos ou pares de conversão".
+// Cada landing page /converter/<par>/ é a ferramenta de verdade: embute o
+// conversor travado no par, além do conteúdo textual e do JSON-LD. Ver AGENTS.md,
+// "Processo para novos formatos ou pares de conversão".
 import { mkdirSync, writeFileSync, readdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { FORMATS, INPUT_KINDS, OUTPUT_KINDS, allowedPair, outputsFor, slug, pattern } from '../dist/formats.js';
+import { converterCardHtml } from './converter-widget.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = path.join(ROOT, 'public', 'converter');
@@ -25,6 +25,7 @@ const SIBLING = {
   blurb: 'faz JPEG, PNG e WebP com redimensionamento — também 100% no navegador',
 };
 const CROSS_PROMO = `<section class="cross-promo"><p><strong>Precisa converter imagens?</strong> O <strong>${SIBLING.name}</strong> ${SIBLING.blurb}.</p><a class="cross-cta" href="${SIBLING.url}">Abrir Conversor de Imagens</a></section>`;
+const FORMAT_LIST = 'TXT, Markdown, HTML, DOCX, PDF, RTF, ODT, CSV e EPUB';
 
 function ogHead({ title, description, url, ogType }) {
   return `  <meta property="og:type" content="${ogType}">
@@ -39,51 +40,94 @@ function ogHead({ title, description, url, ogType }) {
   <meta name="twitter:image" content="${BASE_URL}/assets/appsboxconvdocslogo.png">`;
 }
 
-// Fonte de verdade dos formatos: mantenha em sincronia com InputKind/OutputKind
-// em src/main.ts. `textOnlyInput`/`textOnlyOutput` documentam limites reais de
-// fidelidade (não são apenas texto de marketing) e alimentam o texto de cada
-// página.
-const FORMATS = {
-  txt: { label: 'TXT', long: 'texto simples (TXT)', ext: '.txt' },
-  md: { label: 'Markdown', long: 'Markdown (.md)', ext: '.md' },
-  html: { label: 'HTML', long: 'HTML (.html)', ext: '.html' },
-  docx: { label: 'DOCX', long: 'documento do Word (.docx)', ext: '.docx' },
-  pdf: { label: 'PDF', long: 'PDF (.pdf)', ext: '.pdf' },
-  rtf: { label: 'RTF', long: 'texto formatado (RTF)', ext: '.rtf' },
-  odt: { label: 'ODT', long: 'documento ODT do LibreOffice', ext: '.odt' },
-  csv: { label: 'CSV', long: 'planilha CSV', ext: '.csv' },
-  epub: { label: 'EPUB', long: 'livro digital EPUB', ext: '.epub' },
-  jpg: { label: 'JPG', long: 'imagem JPG', ext: '.jpg' },
-  png: { label: 'PNG', long: 'imagem PNG', ext: '.png' },
-};
-
-// Entradas e saídas reais da aplicação (ver src/main.ts). JPG/PNG são a mesma
-// entrada "image" e só convertem para PDF; EPUB só existe como saída.
-const INPUT_KINDS = ['txt', 'md', 'html', 'docx', 'pdf', 'rtf', 'odt', 'csv', 'jpg', 'png'];
-const OUTPUT_KINDS = ['txt', 'md', 'html', 'docx', 'pdf', 'rtf', 'odt', 'csv', 'epub'];
-function allowedPair(from, to) {
-  if (from === to) return false;
-  if (from === 'jpg' || from === 'png') return to === 'pdf';
-  return true;
-}
 const PAIRS = INPUT_KINDS.flatMap((from) => OUTPUT_KINDS.filter((to) => allowedPair(from, to)).map((to) => [from, to]));
 
-const slug = (from, to) => `${from}-para-${to}`;
-const pattern = (from, to) => `${from}2${to}`;
-
 function escapeHtml(value) {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function fidelityNote(from, to) {
-  if (from === 'jpg' || from === 'png') return '<p class="muted">Cada imagem entra em uma página, incorporada como está (JPEG sem recompressão). Várias imagens podem ser combinadas num único PDF, com a ordem ajustável antes de converter.</p>';
-  if (to === 'epub') return '<p class="muted">O EPUB gerado é um livro de documento único (EPUB 3), com sumário montado a partir dos títulos; não embute imagens nem divide em capítulos.</p>';
-  if (from === 'pdf') return '<p class="muted">O PDF de origem é lido via pdf.js: títulos e listas são reconstruídos pelo tamanho e pela posição do texto; tabelas e formatação inline do arquivo original não são recuperadas. Para PDF → TXT, só o texto corrido.</p>';
-  if (to === 'pdf') return '<p class="muted">O PDF gerado usa fontes proporcionais padrão (Helvetica/Times/Courier, sem incorporar fontes), com hierarquia de títulos, número de página e links clicáveis — não é uma réplica visual do documento de origem, mas é um layout tipográfico de verdade.</p>';
-  if (from === 'csv' || to === 'csv') return '<p class="muted">CSV é tratado como tabela: na leitura, a primeira linha vira cabeçalho; na escrita, só as tabelas do documento são exportadas (delimitador e aspas configuráveis).</p>';
-  if (from === 'rtf' || to === 'rtf') return '<p class="muted">RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados.</p>';
-  if (from === 'odt' || to === 'odt' || from === 'docx' || to === 'docx') return '<p class="muted">Preserva títulos, negrito/itálico/sublinhado/tachado, listas, tabelas, links e acentuação; não preserva imagens, fontes ou estilos customizados.</p>';
-  return '';
+// Limite de fidelidade específico do par, em texto puro (sem tags). Alimenta a
+// copy visível e o FAQPage/JSON-LD.
+function fidelityText(from, to) {
+  if (to === 'epub') return 'O EPUB gerado é um livro de documento único (EPUB 3), com sumário montado a partir dos títulos; não embute imagens nem divide em capítulos.';
+  if (from === 'pdf') return 'O PDF de origem é lido via pdf.js: títulos e listas são reconstruídos pelo tamanho e pela posição do texto; tabelas e formatação inline do arquivo original não são recuperadas. Para PDF para TXT, só o texto corrido.';
+  if (to === 'pdf') return 'O PDF gerado usa fontes proporcionais padrão (Helvetica/Times/Courier, sem incorporar fontes), com hierarquia de títulos, número de página e links clicáveis — não é uma réplica visual do documento de origem, mas é um layout tipográfico de verdade.';
+  if (from === 'csv' || to === 'csv') return 'CSV é tratado como tabela: na leitura, a primeira linha vira cabeçalho; na escrita, só as tabelas do documento são exportadas (delimitador e aspas configuráveis).';
+  if (from === 'rtf' || to === 'rtf') return 'RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados.';
+  if (from === 'odt' || to === 'odt' || from === 'docx' || to === 'docx') return 'Preserva títulos, negrito/itálico/sublinhado/tachado, listas, tabelas, links e acentuação; não preserva imagens, fontes ou estilos customizados.';
+  return 'Preserva a estrutura do texto — títulos, listas, ênfases, tabelas e links — passando por um HTML intermediário comum.';
+}
+const fidelityNote = (from, to) => `<p class="muted">${escapeHtml(fidelityText(from, to))}</p>`;
+
+function faqData(from, to) {
+  const a = FORMATS[from].label;
+  const b = FORMATS[to].label;
+  return [
+    {
+      q: `A conversão de ${a} para ${b} envia meu arquivo para algum servidor?`,
+      answer: `Não. A conversão de ${a} para ${b} acontece inteiramente no seu navegador: o arquivo é lido e o resultado é montado no seu dispositivo. Só um contador agregado de conversões concluídas é registrado — nunca o arquivo, o nome ou o conteúdo.`,
+    },
+    {
+      q: 'Preciso instalar algo, criar conta ou pagar?',
+      answer: 'Não. É uma página web gratuita, sem cadastro. Depois do primeiro carregamento ela funciona offline e pode ser instalada como aplicativo (PWA), se você quiser.',
+    },
+    {
+      q: 'Existe limite de tamanho ou de quantidade de arquivos?',
+      answer: `Não há limite imposto pelo serviço; o limite prático é a memória do seu dispositivo. Vários arquivos ${FORMATS[from].ext} podem ser convertidos de uma vez.`,
+    },
+    {
+      q: `O que é preservado ao converter ${a} para ${b}?`,
+      answer: fidelityText(from, to),
+    },
+  ];
+}
+
+function howToSteps(from, to) {
+  const a = FORMATS[from].label;
+  const b = FORMATS[to].label;
+  return [
+    `Abra esta página — o par ${a} → ${b} já vem selecionado — e adicione um arquivo ${FORMATS[from].ext}.`,
+    'Clique em Converter.',
+    `Baixe o arquivo ${FORMATS[to].ext} gerado. Nenhum upload acontece.`,
+  ];
+}
+
+function jsonLd(from, to, url, title, description) {
+  const a = FORMATS[from].label;
+  const b = FORMATS[to].label;
+  const graph = [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Início', item: `${BASE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: 'Conversões', item: `${BASE_URL}/converter/` },
+        { '@type': 'ListItem', position: 3, name: `${a} para ${b}`, item: url },
+      ],
+    },
+    {
+      '@type': 'HowTo',
+      name: `Como converter ${a} para ${b}`,
+      description,
+      step: howToSteps(from, to).map((text, i) => ({ '@type': 'HowToStep', position: i + 1, text })),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqData(from, to).map(({ q, answer }) => ({
+        '@type': 'Question',
+        name: q,
+        acceptedAnswer: { '@type': 'Answer', text: answer },
+      })),
+    },
+    {
+      '@type': 'WebApplication',
+      name: `Conversor de ${a} para ${b} · AppsBox`,
+      url,
+      applicationCategory: 'Utility',
+      operatingSystem: 'Any (navegador web)',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
+    },
+  ];
+  return `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': graph })}</script>`;
 }
 
 function pagesData() {
@@ -97,6 +141,11 @@ function pagesData() {
       .filter(([f, t]) => (f === from || t === to) && (f !== from || t !== to))
       .map(([f, t]) => `<a href="/converter/${slug(f, t)}/">${FORMATS[f].label} → ${FORMATS[t].label} <small>(${pattern(f, t)})</small></a>`)
       .join('');
+    const faq = faqData(from, to);
+    const faqHtml = faq
+      .map(({ q, answer }) => `<details><summary>${escapeHtml(q)}</summary><p>${escapeHtml(answer)}</p></details>`)
+      .join('');
+    const stepsHtml = howToSteps(from, to).map((s) => `<li>${escapeHtml(s)}</li>`).join('');
     const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -110,26 +159,28 @@ function pagesData() {
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/style.css?release=__RELEASE__">
 ${ogHead({ title, description, url, ogType: 'article' })}
+  ${jsonLd(from, to, url, title, description)}
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
   <title>${escapeHtml(title)} · AppsBox</title>
 </head>
 <body>
   <header class="site-header">
-    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span></div>
+    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro">☾</button></div>
   </header>
   <main>
-    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Converter ${a.label} para ${b.label}</h1><p>Também conhecido como <strong>${pattern(from, to)}</strong> — direto no seu navegador.</p></div></section>
+    <nav class="breadcrumb" aria-label="Trilha"><a href="/">Início</a> › <a href="/converter/">Conversões</a> › <span>${a.label} para ${b.label}</span></nav>
+    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Converter ${a.label} para ${b.label}</h1><p>Também conhecido como <strong>${pattern(from, to)}</strong> — direto no seu navegador, sem upload.</p></div></section>
+    ${converterCardHtml({ locked: true, from, to })}
     <section class="card">
       <p>Este conversor transforma ${a.long} em ${b.long} sem enviar o arquivo a nenhum servidor: a leitura e a montagem do resultado acontecem inteiramente no seu dispositivo, com download imediato.</p>
       <p><strong>Como converter ${a.label} para ${b.label}:</strong></p>
-      <ol>
-        <li>Abra o <a href="/?to=${to}#converter-title">conversor de documentos</a> e adicione um arquivo ${a.ext};</li>
-        <li>Escolha <strong>${b.label}</strong> como formato de saída (já vem selecionado pelo link acima);</li>
-        <li>Clique em <strong>Converter documentos</strong> e baixe o arquivo ${b.ext} gerado.</li>
-      </ol>
+      <ol>${stepsHtml}</ol>
       ${fidelityNote(from, to)}
       <p class="muted">Nenhum arquivo, nome ou conteúdo é enviado ao servidor — apenas um contador agregado de conversões concluídas.</p>
-      <p><a href="/?to=${to}#converter-title">Converter ${a.label} para ${b.label} agora →</a></p>
+    </section>
+    <section class="card faq">
+      <h2>Perguntas frequentes</h2>
+      ${faqHtml}
     </section>
     <section class="card">
       <h2>Outras conversões</h2>
@@ -139,6 +190,8 @@ ${ogHead({ title, description, url, ogType: 'article' })}
     ${CROSS_PROMO}
   </main>
   <footer><a href="https://appsbox.com.br/sobre">Sobre</a><a href="https://appsbox.com.br/fale-conosco">Fale conosco</a><a href="https://appsbox.com.br/termos">Termos de Uso</a><a href="https://appsbox.com.br/privacidade">Privacidade</a><a href="https://appsbox.com.br/cookies">Cookies</a><a href="https://appsbox.com.br/regras-de-conteudo">Regras de Conteúdo</a></footer>
+  <script src="/vendor/jszip.js"></script>
+  <script type="module" src="/main.js?release=__RELEASE__"></script>
 </body>
 </html>
 `;
@@ -148,32 +201,33 @@ ${ogHead({ title, description, url, ogType: 'article' })}
 
 function hubHtml(pages) {
   const links = pages.map((page) => `<a href="/converter/${page.slug}/">${FORMATS[page.from].label} → ${FORMATS[page.to].label} <small>(${page.pattern})</small></a>`).join('');
+  const description = `Todas as conversões de documentos disponíveis: ${FORMAT_LIST}, em qualquer direção, direto no navegador e sem upload.`;
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#102a43">
-  <meta name="description" content="Todas as conversões de documentos disponíveis: TXT, Markdown, HTML, DOCX e PDF, em qualquer direção, direto no navegador.">
+  <meta name="description" content="${escapeHtml(description)}">
   <link rel="canonical" href="${BASE_URL}/converter/">
   <link rel="icon" type="image/png" href="/assets/appsboxconvdocslogo.png">
   <link rel="apple-touch-icon" href="/assets/appsboxconvdocslogo.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/style.css?release=__RELEASE__">
-${ogHead({ title: 'Todas as conversões: TXT, Markdown, HTML, DOCX e PDF', description: 'Todas as conversões de documentos disponíveis: TXT, Markdown, HTML, DOCX e PDF, em qualquer direção, direto no navegador.', url: `${BASE_URL}/converter/`, ogType: 'website' })}
+${ogHead({ title: `Todas as conversões de documentos (${FORMAT_LIST})`, description, url: `${BASE_URL}/converter/`, ogType: 'website' })}
   <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appsbox-conv-documentos-theme')||'light')</script>
-  <title>Todas as conversões: TXT, Markdown, HTML, DOCX e PDF · AppsBox</title>
+  <title>Todas as conversões de documentos · AppsBox</title>
 </head>
 <body>
   <header class="site-header">
-    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span></div>
+    <div class="header-inner"><a class="brand" href="https://appsbox.com.br/"><img src="/assets/appsboxconvdocslogo.png" alt="" aria-hidden="true"><span>AppsBox</span></a><span class="product-name">Conversor de documentos</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro">☾</button></div>
   </header>
   <main>
-    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Todas as conversões</h1><p>TXT, Markdown, HTML, DOCX e PDF, em qualquer direção.</p></div></section>
+    <section class="hero"><div><p class="eyebrow">CONVERSÃO LOCAL</p><h1>Todas as conversões</h1><p>${FORMAT_LIST}, em qualquer direção.</p></div></section>
     <section class="card">
-      <p>Escolha a conversão desejada. Todas rodam no seu navegador, sem upload.</p>
+      <p>Escolha a conversão desejada. Cada página é o próprio conversor, já travado no par, rodando no seu navegador sem upload.</p>
       <div class="convert-links">${links}</div>
-      <p><a href="/">Voltar ao conversor</a></p>
+      <p><a href="/">Abrir o conversor com seletor De → Para</a></p>
     </section>
     ${CROSS_PROMO}
   </main>
@@ -187,10 +241,15 @@ function patchIndexHtml(pages) {
   const indexPath = path.join(ROOT, 'public', 'index.html');
   let index = readFileSync(indexPath, 'utf8');
 
+  const firstFrom = INPUT_KINDS[0];
+  const firstTo = outputsFor(firstFrom)[0];
+  const card = converterCardHtml({ locked: false, from: firstFrom, to: firstTo });
+  index = index.replace(/<!-- converter:start -->[\s\S]*?<!-- converter:end -->/, `<!-- converter:start -->${card}<!-- converter:end -->`);
+
   const links = pages.map((page) => `<a href="/converter/${page.slug}/">${FORMATS[page.from].label} → ${FORMATS[page.to].label} <small>(${page.pattern})</small></a>`).join('');
   index = index.replace(/<!-- seo-links:start -->[\s\S]*?<!-- seo-links:end -->/, `<!-- seo-links:start -->${links}<!-- seo-links:end -->`);
 
-  const jsonLd = {
+  const jsonLdObj = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Conversor de Documentos AppsBox',
@@ -200,7 +259,7 @@ function patchIndexHtml(pages) {
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
     featureList: pages.map((page) => `${FORMATS[page.from].label} para ${FORMATS[page.to].label} (${page.pattern})`),
   };
-  const jsonLdScript = `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+  const jsonLdScript = `<script type="application/ld+json">${JSON.stringify(jsonLdObj)}</script>`;
   index = index.replace(/<!-- seo-jsonld:start -->[\s\S]*?<!-- seo-jsonld:end -->/, `<!-- seo-jsonld:start -->${jsonLdScript}<!-- seo-jsonld:end -->`);
 
   writeFileSync(indexPath, index, 'utf8');
@@ -232,4 +291,4 @@ const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http:
   .join('\n')}\n</urlset>\n`;
 writeFileSync(path.join(ROOT, 'public', 'sitemap.xml'), sitemapXml, 'utf8');
 
-console.log(`Geradas ${pages.length} páginas de conversão + hub + sitemap.xml + blocos seo-links/seo-jsonld em public/index.html`);
+console.log(`Geradas ${pages.length} páginas de conversão + hub + sitemap.xml + blocos seo-links/seo-jsonld/converter em public/index.html`);

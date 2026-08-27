@@ -1,10 +1,13 @@
 # AppsBox Conversor de Documentos
 
-PWA de conversão local de documentos: TXT, Markdown, HTML, DOCX, PDF, RTF, ODT,
-CSV e imagens (JPG/PNG) como entrada; HTML, TXT, Markdown, DOCX, PDF, RTF, ODT,
-CSV e EPUB como saída. Os documentos nunca são enviados ao backend; o único
-serviço é o contador global agregado. O produto é publicado em
-<https://docs.appsbox.com.br>.
+PWA de conversão local de documentos: TXT, Markdown, HTML, DOCX, PDF, RTF, ODT
+e CSV como entrada; os mesmos mais EPUB como saída (EPUB é só saída). O usuário
+escolhe a conversão (**De → Para**) antes de subir os arquivos; só arquivos do
+formato de origem são aceitos. Os documentos nunca são enviados ao backend; o
+único serviço é o contador global agregado. O produto é publicado em
+<https://docs.appsbox.com.br>, com uma landing page por par de conversão em
+`/converter/<origem>-para-<destino>/` que embute o próprio conversor travado
+naquele par.
 
 ## Desenvolvimento
 
@@ -23,15 +26,15 @@ conversão ocorre no navegador com `File.text()`/`File.arrayBuffer()` e
 `DOMParser`. DOCX, ODT e EPUB usam JSZip (`public/vendor/jszip.js`, MIT); PDF é
 gerado por um escritor próprio (com métricas AFM da Adobe em
 `public/vendor/afm/`) e lido com pdf.js (Mozilla, Apache-2.0,
-`public/vendor/pdfjs/`, carregado sob demanda); RTF, CSV e imagens→PDF são
-escritores próprios sem dependências. Tudo vendorizado localmente, sem CDN. Não há engine remota nem upload. O backend local roda em
-`127.0.0.1:9700`.
+`public/vendor/pdfjs/`, carregado sob demanda); RTF e CSV são escritores
+próprios sem dependências. Tudo vendorizado localmente, sem CDN. Não há engine
+remota nem upload. O backend local roda em `127.0.0.1:9700`.
 
 ## Estrutura
 
 ```text
-src/       TypeScript do frontend: orquestração, text-formats, docx, pdf, rtf,
-           odt, csv, epub, image
+src/       TypeScript do frontend: orquestração (main), matriz de formatos
+           (formats), text-formats, docx, pdf, rtf, odt, csv, epub
 public/    shell, PWA, estilos, logo, bibliotecas vendorizadas e páginas de SEO
 backend/   contador Python + SQLite
 scripts/   start, stop, deploy e geração das páginas de SEO

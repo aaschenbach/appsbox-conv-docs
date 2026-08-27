@@ -28,10 +28,16 @@ da aplicação.
 - `.pdf` — documento PDF;
 - `.rtf` — Rich Text Format;
 - `.odt` — documento OpenDocument Text (LibreOffice);
-- `.csv` e `.tsv` — valores separados por delimitador (tratados como tabela);
-- `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif` — imagens, **apenas para saída PDF**.
+- `.csv` e `.tsv` — valores separados por delimitador (tratados como tabela).
 
-Arquivos de outras extensões são rejeitados pela interface e não são enviados.
+Não há conversão de imagem: imagem/PDF é um produto separado, ainda não lançado.
+
+A interface é **par-primeiro**: o usuário escolhe origem → destino antes de subir
+arquivos. Só arquivos da extensão de origem são aceitos (`accept` dinâmico do
+seletor); os demais são rejeitados na interface e nunca enviados. Trocar a
+origem descarta a fila atual, com confirmação. O par também pode ser fixado pela
+URL (`?de=`/`?para=`, aliases `?from=`/`?to=`) e, nas landing pages
+`/converter/<par>/`, pelo próprio HTML da página.
 
 Toda conversão passa por um **HTML intermediário** comum: cada leitor produz
 esse HTML e cada gravador o consome. As conversões entre TXT/Markdown/HTML estão
@@ -102,27 +108,25 @@ e emite o HTML intermediário (PDF → MD/DOCX/HTML/…); tabelas e formatação
 do PDF original não são recuperadas. PDF → TXT continua usando só o texto
 corrido (`pdfToText`).
 
-**RTF, ODT, CSV, EPUB e Imagens → PDF** seguem o mesmo desenho de leitor/gravador
-próprio, 100% local (`src/rtf.ts`, `src/odt.ts`, `src/csv.ts`, `src/epub.ts`,
-`src/image.ts`). ODT e EPUB usam o JSZip já vendorizado, com `mimetype` como
-primeira entrada não comprimida. RTF preserva ênfases, código, títulos, listas,
-tabelas simples e links (acentos como `\uN?`); CSV é tratado como tabela (parser
-RFC 4180, delimitador detectado); EPUB é só saída, um livro de documento único
-com sumário pelos títulos; Imagens → PDF incorpora JPEG sem recompressão
-(`/DCTDecode`) e PNG via canvas (`/FlateDecode` + `/SMask`), uma imagem por
-página, com modo "combinar" para uma fila só de imagens.
+**RTF, ODT, CSV e EPUB** seguem o mesmo desenho de leitor/gravador próprio, 100%
+local (`src/rtf.ts`, `src/odt.ts`, `src/csv.ts`, `src/epub.ts`). ODT e EPUB usam
+o JSZip já vendorizado, com `mimetype` como primeira entrada não comprimida. RTF
+preserva ênfases, código, títulos, listas, tabelas simples e links (acentos como
+`\uN?`); CSV é tratado como tabela (parser RFC 4180, delimitador detectado);
+EPUB é só saída, um livro de documento único com sumário pelos títulos.
 
-A conversão é sequencial por arquivo. Cada resultado tem download individual —
-exceto o modo "combinar imagens", que gera um único PDF. Não há ZIP de
-resultados, histórico, edição ou processamento em paralelo.
+A conversão é sequencial por arquivo, com download individual de cada resultado.
+Não há ZIP de resultados, histórico, edição ou processamento em paralelo.
 
 ### Interface
 
-- seleção múltipla por seletor de arquivos e arrastar/soltar;
-- remoção individual, limpeza da fila e, no modo "combinar imagens", reordenação
-  por `▲▼`;
-- seleção do formato de saída e painel **"Opções de saída"** (PDF, DOCX,
-  Imagens → PDF), com defaults recomendados, persistido em `localStorage`;
+- escolha do par **De → Para** (`#source` / `#output`) antes de subir arquivos;
+  só o formato de origem é aceito; trocar a origem limpa a fila com aviso
+  (`#confirm-dialog`);
+- seleção múltipla por seletor de arquivos e arrastar/soltar; remoção individual
+  e limpeza da fila;
+- painel **"Opções de saída"** (só PDF e DOCX têm opções), com defaults
+  recomendados, persistido em `localStorage`;
 - estado de leitura, conversão, sucesso e falha por sessão;
 - tema claro/escuro persistido em `localStorage`;
 - instalação PWA quando o navegador oferecer o prompt;
@@ -154,12 +158,11 @@ Não estão implementados nem podem ser anunciados nesta versão:
 - em CSV: qualquer coisa que não seja tabela (na escrita) e tipagem de célula;
 - em EPUB: imagens, divisão em capítulos, fontes embutidas — e EPUB não é aceito
   como entrada;
-- em Imagens → PDF: PNG com transparência depende do canvas do navegador; JPEG
-  CMYK/grayscale é tratado como RGB; sem OCR;
+- conversão de imagem (JPG/PNG/…) de qualquer tipo — é um produto futuro;
 - conta, login, histórico, armazenamento de arquivos ou telemetria por arquivo.
 
-Toda a matriz (TXT, Markdown, HTML, DOCX, PDF, RTF, ODT, CSV, EPUB e Imagens →
-PDF) roda no navegador usando exclusivamente JSZip 3.10.1 (MIT,
+Toda a matriz (TXT, Markdown, HTML, DOCX, PDF, RTF, ODT, CSV e EPUB) roda no
+navegador usando exclusivamente JSZip 3.10.1 (MIT,
 `public/vendor/jszip.js`), pdf.js (Mozilla, Apache-2.0, `public/vendor/pdfjs/`,
 sob demanda), as métricas AFM Core 14 da Adobe (`public/vendor/afm/`, só
 larguras de glifo, licença de redistribuição permissiva em
@@ -200,7 +203,8 @@ Não há CDN, origem externa, upload ou rota de conversão no servidor.
 ## 5. Arquitetura do repositório
 
 ```text
-src/main.ts                         interface, fila e orquestração da conversão
+src/main.ts                         interface, par De -> Para, fila e orquestração
+src/formats.ts                      matriz única de formatos (entrada/saída/accept)
 src/text-formats.ts                 TXT/Markdown/HTML (extraído para teste)
 src/docx.ts                         leitor/gravador OOXML (DOCX) via JSZip
 src/pdf.ts                          gerador PDF próprio + leitor via pdf.js
@@ -208,11 +212,13 @@ src/rtf.ts                          leitor/gravador RTF próprio
 src/odt.ts                          leitor/gravador ODF (ODT) via JSZip
 src/csv.ts                          parser/gravador CSV/TSV (RFC 4180)
 src/epub.ts                         gravador EPUB 3 via JSZip (só saída)
-src/image.ts                        imagens -> PDF (combinar), JPEG/PNG
 src/afm-widths.ts                   larguras de glifo AFM (gerado, não editar)
 scripts/build-afm.mjs               compila public/vendor/afm/*.afm -> afm-widths.ts
+scripts/converter-widget.mjs        markup único do card (home + landing pages)
+scripts/generate-seo-pages.mjs      landing pages por par (conversor embutido) + sitemap
 public/vendor/afm/                  métricas AFM Core 14 da Adobe (licença permissiva)
-public/index.html                   shell PWA + blocos seo-links/seo-jsonld
+public/index.html                   shell PWA + blocos converter/seo-links/seo-jsonld
+public/converter/<par>/             landing page com o conversor travado no par
 public/style.css                    estilos responsivos e temas
 public/manifest.webmanifest         manifesto instalável
 public/service-worker.js            cache do shell

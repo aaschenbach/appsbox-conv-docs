@@ -10,7 +10,11 @@
 
 ## Estrutura e escopo
 
-- `src/`: TypeScript do frontend (`main.ts`, `docx.ts`, `pdf.ts`);
+- `src/`: TypeScript do frontend. `formats.ts` é a **matriz única de formatos**
+  (entradas, saídas, pares válidos, `accept` por formato), importada por
+  `main.ts` e — já compilada em `dist/formats.js` — por
+  `scripts/generate-seo-pages.mjs`. Demais: `main.ts` (orquestração/UI),
+  `docx.ts`, `pdf.ts`, `rtf.ts`, `odt.ts`, `csv.ts`, `epub.ts`, `text-formats.ts`;
 - `public/`: shell, PWA, estilos, logo, bibliotecas vendorizadas
   (`public/vendor/`) e páginas de SEO (`public/converter/`);
 - `backend/`: somente o contador agregado;
@@ -31,9 +35,15 @@ carregada de CDN; tudo é vendorizado localmente.
 ## Formatos atualmente suportados
 
 **Entrada:** TXT, Markdown (`.md`, `.markdown`), HTML (`.html`, `.htm`), DOCX
-(`.docx`), PDF (`.pdf`), RTF (`.rtf`), ODT (`.odt`), CSV/TSV (`.csv`, `.tsv`) e
-imagens JPG/PNG (só para PDF). **Saída:** HTML, TXT, Markdown, DOCX, PDF, RTF,
-ODT, CSV e EPUB. EPUB é só saída; JPG/PNG só convertem para PDF.
+(`.docx`), PDF (`.pdf`), RTF (`.rtf`), ODT (`.odt`) e CSV/TSV (`.csv`, `.tsv`).
+**Saída:** os mesmos mais EPUB. EPUB é só saída. Não há conversão de imagem
+(imagem/PDF é um produto separado, futuro).
+
+A interface é **par-primeiro**: o usuário escolhe origem → destino (`#source` /
+`#output`) antes de subir arquivos; só arquivos do formato de origem são aceitos
+(`accept` dinâmico), e trocar a origem descarta a fila com um aviso
+(`#confirm-dialog`). O par também pode vir da URL (`?de=`/`?para=`, aliases
+`?from=`/`?to=`) e, nas landing pages, de `#converter-widget[data-locked|data-from|data-to]`.
 
 A conversão passa por um HTML intermediário comum. Cada leitor produz esse HTML;
 cada gravador o consome. `src/text-formats.ts` cobre TXT/Markdown/HTML (extraído
@@ -57,13 +67,6 @@ imagens, linguagem de code fence e blocos de definição.
   documento único (`mimetype` STORE primeiro, `container.xml`, `content.opf`,
   `nav.xhtml` com sumário pelos H1/H2, `text.xhtml`, `style.css`). Sem imagens
   nem divisão em capítulos.
-- **Imagens → PDF** (`src/image.ts`): "combinar imagens num PDF". JPEG entra
-  como `/DCTDecode` sem recompressão (dimensão lida do marcador SOF); PNG e
-  afins são rasterizados via canvas no navegador → `/FlateDecode` (+ `/SMask`
-  com alfa). Aceita `PdfImageOptions` (página A4/Carta/ajustar, orientação,
-  margem, conter/preencher). Fila só de imagens + saída PDF ⇒ um único PDF, com
-  ordem ajustável (`▲▼`).
-
 - **DOCX** (`src/docx.ts`): gerador/leitor OOXML escrito à mão. Preserva
   títulos, negrito/itálico/sublinhado/tachado, listas, tabelas, links e
   acentuação; não preserva imagens, fontes, estilos customizados,
@@ -86,12 +89,30 @@ imagens, linguagem de code fence e blocos de definição.
   página. A leitura usa pdf.js para extrair texto corrido do PDF de origem;
   não reconstrói títulos, tabelas, listas ou links do PDF original.
 
-A interface tem um painel **"Opções de saída"** (`<dialog>` em
-`public/index.html`, estado em `main.ts`/`localStorage`): mostra a seção do
-formato de saída selecionado (PDF, DOCX ou Imagens→PDF) e, para os formatos de
-texto, informa que não há o que configurar. Os defaults já são os recomendados.
+A interface tem um painel **"Opções de saída"** (`<dialog id="options-dialog">`,
+markup em `scripts/converter-widget.mjs`, estado em `main.ts`/`localStorage`):
+mostra a seção do formato de saída selecionado (só PDF e DOCX têm opções) e, para
+os formatos de texto, informa que não há o que configurar. Os defaults já são os
+recomendados.
 
-Não anunciar XLS/XLSX, PPT/PPTX, ODS/ODP, EPUB como entrada, OCR ou DOC binário.
+O markup do card do conversor é **fonte única** em
+`scripts/converter-widget.mjs` (`converterCardHtml({ locked, from, to })`),
+injetado por `generate-seo-pages.mjs` na home (entre `<!-- converter:start -->`
+e `<!-- converter:end -->` em `public/index.html`, modo `unlocked`) e em cada
+`public/converter/<par>/index.html` (modo `locked`: par fixo, sem `#source`).
+Cada landing page embute esse conversor real logo abaixo do H1, além da copy,
+do FAQ visível e do JSON-LD (`BreadcrumbList` + `HowTo` + `FAQPage` +
+`WebApplication`).
+
+Não anunciar XLS/XLSX, PPT/PPTX, ODS/ODP, EPUB como entrada, OCR, DOC binário
+nem conversão de imagem (JPG/PNG/…): imagem/PDF é um produto separado, ainda não
+lançado.
+
+A matriz de formatos vive só em `src/formats.ts` (`INPUT_KINDS`,
+`OUTPUT_KINDS`, `allowedPair`, `FORMATS` com `accept`). Ao adicionar/remover um
+formato ou par, mexa **só** nesse arquivo; `main.ts` e o gerador de SEO seguem.
+`npm run generate-seo` roda `npm run build` antes (o gerador importa
+`dist/formats.js`).
 
 ## Processo para novos formatos ou pares de conversão
 
@@ -112,13 +133,16 @@ trabalho pronto:
 3. **Documentar limites de fidelidade** explicitamente — o que é preservado
    e o que é descartado — no PRD, neste arquivo e no README.
 4. **Gerar as páginas de SEO**: rodar `npm run generate-seo`
-   (`scripts/generate-seo-pages.mjs`), que regenera `public/converter/*`
-   (uma página por par de conversão, com o padrão curto tipo `md2docx` no
-   título/H1), o hub `public/converter/`, `public/sitemap.xml` e os blocos
-   `<!-- seo-links -->`/`<!-- seo-jsonld -->` dentro de `public/index.html`
-   a partir da mesma matriz de formatos usada pela aplicação. Nunca anunciar,
-   nessas páginas ou no `JSON-LD`, um par de conversão que a aplicação não
-   suporte de fato.
+   (`scripts/generate-seo-pages.mjs`), que regenera `public/converter/*` (uma
+   landing page por par, com o conversor embutido travado no par, FAQ visível e
+   JSON-LD `BreadcrumbList`/`HowTo`/`FAQPage`/`WebApplication`, com o padrão
+   curto tipo `md2docx` no título/H1), o hub `public/converter/`,
+   `public/sitemap.xml` e os blocos `<!-- converter -->`/`<!-- seo-links -->`/
+   `<!-- seo-jsonld -->` dentro de `public/index.html` — tudo a partir de
+   `src/formats.ts` e do markup único em `scripts/converter-widget.mjs`. Nunca
+   anunciar, nessas páginas ou no `JSON-LD`, um par que a aplicação não suporte
+   de fato. Depois de mexer no widget ou na matriz, rode também `npm test` (os
+   testes `formats`/`main`/`seo` validam a paridade).
 5. **Rodar a validação obrigatória completa** (seção abaixo) e revisar o
    `git status`/`git diff` antes de commitar.
 6. **Deploy e push** seguindo a seção "Publicação" abaixo, com validação
