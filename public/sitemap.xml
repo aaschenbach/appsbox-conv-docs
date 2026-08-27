@@ -2,90 +2,274 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://docs.appsbox.com.br/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/txt-para-md/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/txt-para-html/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/txt-para-docx/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/txt-para-pdf/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/txt-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/txt-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/txt-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/txt-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/md-para-txt/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/md-para-html/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/md-para-docx/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/md-para-pdf/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/md-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/md-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/md-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/md-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/html-para-txt/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/html-para-md/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/html-para-docx/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/html-para-pdf/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/html-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/html-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/html-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/html-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/docx-para-txt/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/docx-para-md/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/docx-para-html/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/docx-para-pdf/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/docx-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/docx-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/docx-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/docx-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/pdf-para-txt/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/pdf-para-md/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/pdf-para-html/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
   </url>
   <url>
     <loc>https://docs.appsbox.com.br/converter/pdf-para-docx/</loc>
-    <lastmod>2026-08-26</lastmod>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/pdf-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/pdf-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/pdf-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/pdf-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-txt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-md/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-html/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-docx/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-pdf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/rtf-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-txt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-md/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-html/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-docx/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-pdf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-csv/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/odt-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-txt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-md/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-html/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-docx/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-pdf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-rtf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-odt/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/csv-para-epub/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/jpg-para-pdf/</loc>
+    <lastmod>2026-08-27</lastmod>
+  </url>
+  <url>
+    <loc>https://docs.appsbox.com.br/converter/png-para-pdf/</loc>
+    <lastmod>2026-08-27</lastmod>
   </url>
 </urlset>

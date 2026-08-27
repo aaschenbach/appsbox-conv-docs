@@ -1,7 +1,8 @@
 # AppsBox Conversor de Documentos
 
-PWA de conversão local de TXT, Markdown, HTML, DOCX e PDF para HTML, TXT,
-Markdown, DOCX ou PDF. Os documentos nunca são enviados ao backend; o único
+PWA de conversão local de documentos: TXT, Markdown, HTML, DOCX, PDF, RTF, ODT,
+CSV e imagens (JPG/PNG) como entrada; HTML, TXT, Markdown, DOCX, PDF, RTF, ODT,
+CSV e EPUB como saída. Os documentos nunca são enviados ao backend; o único
 serviço é o contador global agregado. O produto é publicado em
 <https://docs.appsbox.com.br>.
 
@@ -19,16 +20,18 @@ node --check public/service-worker.js
 
 O frontend é HTML, CSS e TypeScript estrito, compilado para `dist/`. A
 conversão ocorre no navegador com `File.text()`/`File.arrayBuffer()` e
-`DOMParser`; DOCX é lido e gravado com JSZip (`public/vendor/jszip.js`, MIT);
-PDF é gerado por um escritor próprio e lido com pdf.js (Mozilla, Apache-2.0,
-`public/vendor/pdfjs/`, carregado sob demanda). Tudo vendorizado localmente,
-sem CDN. Não há engine remota nem upload. O backend local roda em
+`DOMParser`. DOCX, ODT e EPUB usam JSZip (`public/vendor/jszip.js`, MIT); PDF é
+gerado por um escritor próprio (com métricas AFM da Adobe em
+`public/vendor/afm/`) e lido com pdf.js (Mozilla, Apache-2.0,
+`public/vendor/pdfjs/`, carregado sob demanda); RTF, CSV e imagens→PDF são
+escritores próprios sem dependências. Tudo vendorizado localmente, sem CDN. Não há engine remota nem upload. O backend local roda em
 `127.0.0.1:9700`.
 
 ## Estrutura
 
 ```text
-src/       TypeScript do frontend, conversão local, DOCX e PDF
+src/       TypeScript do frontend: orquestração, text-formats, docx, pdf, rtf,
+           odt, csv, epub, image
 public/    shell, PWA, estilos, logo, bibliotecas vendorizadas e páginas de SEO
 backend/   contador Python + SQLite
 scripts/   start, stop, deploy e geração das páginas de SEO
@@ -67,8 +70,7 @@ sudo apache2ctl configtest
 O modelo de serviço e VirtualHost está em `deploy/`. O deploy compila, publica
 uma release imutável, alterna `current` atomicamente e valida a URL pública.
 Consulte o [PRD](PRD_AppsBox_Conversor_de_Documentos.md) para o escopo exato;
-não anuncie OCR, outros formatos Office (XLS/XLSX, PPT/PPTX, ODT/ODS/ODP,
-RTF) ou EPUB nesta versão — apenas TXT, Markdown, HTML, DOCX e PDF.
+não anuncie OCR, XLS/XLSX, PPT/PPTX, ODS/ODP, DOC binário ou EPUB como entrada.
 
 ## Privacidade
 

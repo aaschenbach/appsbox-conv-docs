@@ -17,17 +17,50 @@ export type RunPart =
   | { kind: 'break' }
   | { kind: 'hyperlink'; href: string; parts: RunPart[] };
 
+// ---------------------------------------------------------------------------
+// Opções de saída DOCX (ver painel "Opções de saída"). Todos os campos têm
+// default; chamadas sem `options` produzem o layout atual (Calibri 11, A4).
+// ---------------------------------------------------------------------------
+export type DocxFontFamily = 'Calibri' | 'Arial' | 'Georgia' | 'Times New Roman';
+export type DocxPageSize = 'a4' | 'letter';
+export type DocxMargins = 'narrow' | 'normal' | 'wide';
+export interface DocxOptions {
+  fontFamily: DocxFontFamily;
+  baseSize: number; // pt do corpo (9–14)
+  pageSize: DocxPageSize;
+  margins: DocxMargins;
+}
+export const DEFAULT_DOCX_OPTIONS: DocxOptions = {
+  fontFamily: 'Calibri',
+  baseSize: 11,
+  pageSize: 'a4',
+  margins: 'normal',
+};
+function resolveDocxOptions(partial?: Partial<DocxOptions>): DocxOptions {
+  const o = { ...DEFAULT_DOCX_OPTIONS, ...(partial ?? {}) };
+  o.baseSize = Math.min(14, Math.max(9, o.baseSize || DEFAULT_DOCX_OPTIONS.baseSize));
+  return o;
+}
+const DOCX_PAGE_TWIPS: Record<DocxPageSize, { w: number; h: number }> = {
+  a4: { w: 11906, h: 16838 },
+  letter: { w: 12240, h: 15840 },
+};
+const DOCX_MARGIN_TWIPS: Record<DocxMargins, number> = { narrow: 720, normal: 1417, wide: 1800 };
+
 const CONTENT_TYPES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>';
 
 const PACKAGE_RELS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>';
 
-const STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-  '<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>' +
-  '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
-  [1, 2, 3, 4, 5, 6].map((level) => `<w:style w:type="paragraph" w:styleId="Heading${level}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="${level - 1}"/></w:pPr><w:rPr><w:b/><w:sz w:val="${Math.max(22, 40 - (level - 1) * 4)}"/></w:rPr></w:style>`).join('') +
-  '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/></w:style>' +
-  '<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr></w:style>' +
-  '</w:styles>';
+function stylesXml(opts: DocxOptions): string {
+  const base = Math.round(opts.baseSize * 2); // meio-pontos
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${xmlEscape(opts.fontFamily)}" w:hAnsi="${xmlEscape(opts.fontFamily)}"/><w:sz w:val="${base}"/></w:rPr></w:rPrDefault></w:docDefaults>` +
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
+    [1, 2, 3, 4, 5, 6].map((level) => `<w:style w:type="paragraph" w:styleId="Heading${level}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="${level - 1}"/></w:pPr><w:rPr><w:b/><w:sz w:val="${Math.max(base, base + 18 - (level - 1) * 4)}"/></w:rPr></w:style>`).join('') +
+    '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/></w:style>' +
+    '<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr></w:style>' +
+    '</w:styles>';
+}
 
 const NUMBERING_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
   '<w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>' +
@@ -161,7 +194,7 @@ function visitBlock(node: Node, blocks: string[], rels: RelBuilder): void {
   Array.from(element.children).forEach((child) => visitBlock(child, blocks, rels));
 }
 
-function htmlToDocumentXml(html: string): { documentXml: string; relsXml: string } {
+function htmlToDocumentXml(html: string, opts: DocxOptions): { documentXml: string; relsXml: string } {
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const rels = new RelBuilder();
   const blocks: string[] = [];
@@ -170,18 +203,22 @@ function htmlToDocumentXml(html: string): { documentXml: string; relsXml: string
     const parts = collectRuns(parsed.body, {});
     if (parts.length) blocks.push(paragraphXml(parts, rels));
   }
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${blocks.join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const page = DOCX_PAGE_TWIPS[opts.pageSize];
+  const m = DOCX_MARGIN_TWIPS[opts.margins];
+  const sectPr = `<w:sectPr><w:pgSz w:w="${page.w}" w:h="${page.h}"/><w:pgMar w:top="${m}" w:right="${m}" w:bottom="${m}" w:left="${m}" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${blocks.join('')}${sectPr}</w:body></w:document>`;
   return { documentXml, relsXml: rels.toXml() };
 }
 
-export async function htmlToDocxBytes(html: string): Promise<Uint8Array> {
-  const { documentXml, relsXml } = htmlToDocumentXml(html);
+export async function htmlToDocxBytes(html: string, options?: Partial<DocxOptions>): Promise<Uint8Array> {
+  const opts = resolveDocxOptions(options);
+  const { documentXml, relsXml } = htmlToDocumentXml(html, opts);
   const zip = new JSZip();
   zip.file('[Content_Types].xml', CONTENT_TYPES_XML);
   zip.file('_rels/.rels', PACKAGE_RELS_XML);
   zip.file('word/document.xml', documentXml);
   zip.file('word/_rels/document.xml.rels', relsXml);
-  zip.file('word/styles.xml', STYLES_XML);
+  zip.file('word/styles.xml', stylesXml(opts));
   zip.file('word/numbering.xml', NUMBERING_XML);
   zip.file('docProps/core.xml', coreXml());
   zip.file('docProps/app.xml', APP_XML);

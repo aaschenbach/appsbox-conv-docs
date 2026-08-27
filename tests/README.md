@@ -4,18 +4,25 @@ Esta pasta é reservada para fixtures sintéticos, públicos ou licenciados. Nã
 adicione documentos pessoais, arquivos de clientes ou dados secretos. Cada
 fixture deve documentar o formato, a finalidade e a limitação que cobre.
 
-`docx.test.mjs` e `pdf.test.mjs` rodam com `node --test` (`npm test`) e usam
-`jsdom` (apenas em tempo de teste, nunca embarcado no navegador) para expor
-`DOMParser` fora do browser.
+Todos os testes rodam com `node --test` (`npm test`) e usam `jsdom` (apenas em
+tempo de teste, nunca embarcado no navegador) para expor `DOMParser` fora do
+browser; os de ODT/EPUB carregam o JSZip vendorizado num escopo CommonJS
+isolado.
 
-- `docx.test.mjs` gera fixtures DOCX sinteticamente dentro do próprio teste —
-  via `htmlToDocxBytes` e via XML OOXML montado manualmente com JSZip — para
-  cobrir o round trip HTML→DOCX→HTML e o caso de listas por estilo
-  (`ListBullet`/`ListNumber`, sem `numPr`), que é como o Word e bibliotecas
-  como `python-docx` costumam gravar listas.
-- `pdf.test.mjs` valida a estrutura do PDF gerado por `htmlToPdfBytes`
-  (cabeçalho, `%%EOF`, fontes, paginação em múltiplas páginas) sem depender
-  de pdf.js, que só roda em navegador.
+- `docx.test.mjs` — round trip HTML→DOCX→HTML, listas por estilo
+  (`ListBullet`/`ListNumber` sem `numPr`) e as opções de fonte/página/margem.
+- `pdf.test.mjs` — estrutura do PDF gerado (cabeçalho, `%%EOF`, fontes
+  Helvetica/Times, quebra proporcional, `/Annots`, número de página, opções) e
+  o helper puro `linesToStructuredHtml` (PDF → estrutura). Não depende de pdf.js.
+- `text-formats.test.mjs` — TXT/Markdown/HTML: listas aninhadas, imagens,
+  linguagem no code fence, listas de definição, round trips.
+- `rtf.test.mjs`, `odt.test.mjs` — leitor/gravador próprio; round trips e, no
+  ODT, `mimetype` STORE como primeira entrada.
+- `csv.test.mjs` — parser RFC 4180, detecção de delimitador, tabela ↔ CSV.
+- `epub.test.mjs` — pacote EPUB 3 (mimetype STORE primeiro, container/opf/nav,
+  XHTML válido).
+- `image.test.mjs` — `jpegSize` (marcador SOF) e a montagem do PDF de imagens
+  (`/DCTDecode` para JPEG, `/FlateDecode` + `/SMask` para RGBA, N páginas).
 
 Esses testes automatizados **não substituem** a verificação cruzada manual
 exigida pelo processo em `AGENTS.md` ("Processo para novos formatos ou pares

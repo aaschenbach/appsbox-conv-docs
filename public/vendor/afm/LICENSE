@@ -1,0 +1,26 @@
+Adobe Core 14 AFM Files
+=======================
+
+Os arquivos *.afm neste diretório são as tabelas de métricas (Adobe Font
+Metrics) das 12 variantes das famílias Helvetica, Times e Courier — as fontes
+padrão sempre presentes em qualquer leitor de PDF. Nenhum contorno de fonte é
+distribuído aqui, apenas larguras de glifo, usadas por src/pdf.ts para calcular
+quebra de linha proporcional sem embutir fontes.
+
+Cada arquivo traz o cabeçalho original da Adobe:
+
+  Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.
+  All Rights Reserved.
+
+Licença de distribuição da Adobe para estes arquivos (AFM Core 14):
+
+  This file and the 14 PostScript(R) AFM files it accompanies may be used,
+  copied, and distributed for any purpose and without charge, with or without
+  modification, provided that all copyright notices are retained; that the AFM
+  files are not distributed without this file; that all modifications to this
+  file or any of the AFM files are prominently noted in the modified file(s);
+  and that this paragraph is not modified. Adobe Systems has no responsibility
+  or obligation to support the use of the AFM files.
+
+Obtidos de: https://github.com/foliojs/pdfkit (lib/font/data/), que os
+redistribui sob a mesma licença. Não modificados.

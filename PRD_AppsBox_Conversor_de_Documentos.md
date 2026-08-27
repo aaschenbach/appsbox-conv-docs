@@ -25,28 +25,45 @@ da aplicação.
 - `.md` e `.markdown` — Markdown básico;
 - `.html` e `.htm` — HTML;
 - `.docx` — documento OOXML do Word;
-- `.pdf` — documento PDF.
+- `.pdf` — documento PDF;
+- `.rtf` — Rich Text Format;
+- `.odt` — documento OpenDocument Text (LibreOffice);
+- `.csv` e `.tsv` — valores separados por delimitador (tratados como tabela);
+- `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif` — imagens, **apenas para saída PDF**.
 
 Arquivos de outras extensões são rejeitados pela interface e não são enviados.
 
+Toda conversão passa por um **HTML intermediário** comum: cada leitor produz
+esse HTML e cada gravador o consome. As conversões entre TXT/Markdown/HTML estão
+em `src/text-formats.ts` (`htmlToMarkdown` reconstrói listas aninhadas, imagens,
+linguagem de bloco de código e listas de definição).
+
 ### Saídas aceitas
 
-- **HTML:** TXT é encapsulado em `<pre>`, Markdown recebe conversão local de
-  títulos, parágrafos, negrito e itálico; HTML existente é preservado como
-  texto de saída; DOCX é lido e convertido para HTML equivalente; PDF é lido
-  (texto corrido) e encapsulado em `<pre>`;
-- **TXT:** HTML é convertido para texto usando `DOMParser`; TXT e Markdown são
-  mantidos como texto; DOCX e PDF seguem o mesmo caminho do texto extraído;
-- **Markdown:** Markdown, TXT, HTML, DOCX e PDF são tratados como texto. HTML
-  e DOCX não são reconstruídos semanticamente para Markdown nesta versão
-  (apenas encapsulados como HTML/texto de origem);
-- **DOCX:** TXT, Markdown, HTML e PDF são normalizados para um HTML
-  intermediário e então serializados como pacote OOXML mínimo
+- **HTML:** Markdown recebe conversão local (títulos, parágrafos, ênfases,
+  listas, tabelas, links); TXT é encapsulado em `<pre>`; HTML é preservado;
+  DOCX/ODT/RTF/CSV são lidos para o HTML intermediário; PDF é lido com
+  reconstrução de títulos e listas (via pdf.js);
+- **TXT:** qualquer entrada é reduzida ao texto do HTML intermediário
+  (`DOMParser`);
+- **Markdown:** o HTML intermediário de qualquer entrada é convertido
+  semanticamente por `htmlToMarkdown`;
+- **DOCX:** o HTML intermediário é serializado como pacote OOXML mínimo
   (`word/document.xml`, `styles.xml`, `numbering.xml`, `docProps/*`) gerado
-  com JSZip;
+  com JSZip; aceita opções de fonte, tamanho de corpo, página e margem;
+- **RTF:** o HTML intermediário vira RTF próprio (parágrafos, ênfases, código,
+  títulos, listas, tabelas simples, links); acentos como `\uN?`;
+- **ODT:** pacote ODF mínimo gerado com JSZip (`mimetype` STORE primeiro,
+  `content.xml`, `styles.xml`, `meta.xml`, `META-INF/manifest.xml`);
+- **CSV:** serializa a primeira tabela do documento (ou uma coluna por bloco
+  quando não há tabela); delimitador e aspas configuráveis;
+- **EPUB:** EPUB 3 de documento único gerado com JSZip (`mimetype` STORE
+  primeiro, `container.xml`, `content.opf`, `nav.xhtml` com sumário pelos
+  H1/H2, `text.xhtml`, `style.css`); **só saída**;
 - **PDF:** TXT, Markdown, HTML e DOCX são normalizados para o mesmo HTML
-  intermediário e então desenhados como um PDF próprio, monoespaçado
-  (Courier), com paginação A4.
+  intermediário e então desenhados como um PDF próprio com fontes
+  proporcionais padrão (Helvetica/Times/Courier), hierarquia de títulos,
+  número de página e links clicáveis, paginação A4 ou Carta.
 
 A conversão para/de DOCX é feita por um leitor/gravador OOXML escrito à mão
 em `src/docx.ts`, sem Pandoc, LibreOffice ou serviço remoto. Ela preserva
@@ -59,30 +76,53 @@ leitura e nunca gerados na escrita.
 
 A conversão para/de PDF é feita em `src/pdf.ts`. A **escrita** é um gerador
 PDF próprio (objetos PDF montados à mão: catálogo, páginas, fontes padrão,
-fluxo de conteúdo, tabela xref) que usa as 4 variantes de Courier
-(monoespaçada, sem incorporar fonte) para poder quebrar linha e paginar por
-contagem de caracteres — títulos, negrito, itálico e listas são preservados,
-mas o layout visual é monoespaçado, não uma réplica do documento de origem;
-tabelas são desenhadas como uma grade real (bordas, largura de coluna
-proporcional ao conteúdo mais longo de cada coluna, cabeçalho com fundo
-sombreado, quebra de linha por célula e nova página entre linhas quando
-necessário), mas o cabeçalho não se repete quando a tabela atravessa uma
-quebra de página; não há links clicáveis, sublinhado real ou imagens no PDF
-gerado (sublinhado/tachado são desenhados como um traço). A **leitura** usa
-pdf.js (Mozilla, Apache-2.0, vendorizado em
-`public/vendor/pdfjs/`, carregado sob demanda) para extrair texto corrido do
-PDF de origem via `getTextContent`; não reconstrói títulos, tabelas, listas
-ou links do PDF original.
+fluxo de conteúdo, anotações, tabela xref). **Não incorpora fontes**: usa as
+famílias padrão nº 14 (Helvetica, Times ou Courier, sempre presentes em
+qualquer leitor PDF) e as tabelas de largura de glifo AFM da Adobe
+(`public/vendor/afm/`, compiladas em `src/afm-widths.ts` por
+`scripts/build-afm.mjs`) para fazer quebra de linha e justificação
+proporcionais de verdade — não uma quebra por contagem de caractere. Preserva
+hierarquia de títulos (H1–H6 com escala e espaçamento), negrito, itálico,
+listas com recuo pendente, número de página no rodapé e **links clicáveis**
+(anotações `/Link` com ação URI). Código (`code`/`<pre>`) fica sempre em
+Courier. O layout é configurável via `PdfOptions` (família, tamanho de corpo,
+entrelinha, tamanho de página A4/Carta, margens, número de página,
+justificação), com defaults tipográficos bons; ainda **não** é uma réplica
+visual do documento de origem. Tabelas são desenhadas como uma grade real
+(bordas, largura de coluna proporcional ao conteúdo mais longo de cada coluna,
+cabeçalho com fundo sombreado, quebra de linha por célula e nova página entre
+linhas quando necessário), mas o cabeçalho não se repete quando a tabela
+atravessa uma quebra de página; sublinhado/tachado são desenhados como um
+traço; não há imagens no PDF gerado; a codificação é WinAnsi (sem Unicode além
+de cp1252). A **leitura** usa pdf.js (Mozilla, Apache-2.0, vendorizado em
+`public/vendor/pdfjs/`, carregado sob demanda) para extrair o texto de origem
+via `getTextContent`. `pdfToStructured` agrupa os trechos em linhas pelo `y`,
+detecta títulos pelo tamanho de fonte relativo ao corpo e listas pelo marcador,
+e emite o HTML intermediário (PDF → MD/DOCX/HTML/…); tabelas e formatação inline
+do PDF original não são recuperadas. PDF → TXT continua usando só o texto
+corrido (`pdfToText`).
 
-A conversão é sequencial por arquivo. Cada resultado tem download individual;
-não há ZIP, histórico, edição, pré-visualização avançada ou processamento em
-paralelo.
+**RTF, ODT, CSV, EPUB e Imagens → PDF** seguem o mesmo desenho de leitor/gravador
+próprio, 100% local (`src/rtf.ts`, `src/odt.ts`, `src/csv.ts`, `src/epub.ts`,
+`src/image.ts`). ODT e EPUB usam o JSZip já vendorizado, com `mimetype` como
+primeira entrada não comprimida. RTF preserva ênfases, código, títulos, listas,
+tabelas simples e links (acentos como `\uN?`); CSV é tratado como tabela (parser
+RFC 4180, delimitador detectado); EPUB é só saída, um livro de documento único
+com sumário pelos títulos; Imagens → PDF incorpora JPEG sem recompressão
+(`/DCTDecode`) e PNG via canvas (`/FlateDecode` + `/SMask`), uma imagem por
+página, com modo "combinar" para uma fila só de imagens.
+
+A conversão é sequencial por arquivo. Cada resultado tem download individual —
+exceto o modo "combinar imagens", que gera um único PDF. Não há ZIP de
+resultados, histórico, edição ou processamento em paralelo.
 
 ### Interface
 
 - seleção múltipla por seletor de arquivos e arrastar/soltar;
-- remoção individual e limpeza da fila;
-- seleção do formato de saída;
+- remoção individual, limpeza da fila e, no modo "combinar imagens", reordenação
+  por `▲▼`;
+- seleção do formato de saída e painel **"Opções de saída"** (PDF, DOCX,
+  Imagens → PDF), com defaults recomendados, persistido em `localStorage`;
 - estado de leitura, conversão, sucesso e falha por sessão;
 - tema claro/escuro persistido em `localStorage`;
 - instalação PWA quando o navegador oferecer o prompt;
@@ -93,8 +133,8 @@ paralelo.
 
 Não estão implementados nem podem ser anunciados nesta versão:
 
-- DOC binário (`.doc` legado), ODT/ODS/ODP, RTF, EPUB;
-- XLS/XLSX/CSV e apresentações (PPT/PPTX);
+- DOC binário (`.doc` legado), ODS/ODP, EPUB como **entrada**;
+- XLS/XLSX e apresentações (PPT/PPTX);
 - OCR (extração de texto de imagem escaneada dentro de um PDF);
 - macros, JavaScript de documentos, objetos ativos, PDFs criptografados ou
   assinados digitalmente;
@@ -102,22 +142,33 @@ Não estão implementados nem podem ser anunciados nesta versão:
 - em DOCX: imagens, fontes, estilos customizados, cabeçalho/rodapé, notas de
   rodapé, comentários, controle de alterações, numeração multinível e objetos
   incorporados — a leitura os descarta e a escrita nunca os gera;
-- em PDF: imagens, fontes incorporadas/customizadas, layout visual
-  proporcional, links clicáveis, cabeçalho/rodapé de tabela repetido entre
-  páginas, formulários e assinaturas — a escrita gera texto monoespaçado
-  paginado (com tabelas em grade real, mas sem repetir o cabeçalho da tabela
-  numa quebra de página) e a leitura extrai apenas texto corrido;
+- em PDF: imagens no PDF gerado, fontes incorporadas/customizadas, réplica
+  visual do documento de origem, texto Unicode fora de cp1252, cabeçalho de
+  tabela repetido entre páginas, formulários e assinaturas — a escrita gera um
+  layout tipográfico próprio (fontes proporcionais padrão, hierarquia de
+  títulos, número de página, links clicáveis, tabelas em grade real sem
+  repetir o cabeçalho numa quebra de página) e a leitura extrai apenas texto
+  corrido;
+- em RTF/ODT: fontes, cores, estilos customizados, imagens, cabeçalho/rodapé,
+  notas e metadados — descartados na leitura, nunca gerados na escrita;
+- em CSV: qualquer coisa que não seja tabela (na escrita) e tipagem de célula;
+- em EPUB: imagens, divisão em capítulos, fontes embutidas — e EPUB não é aceito
+  como entrada;
+- em Imagens → PDF: PNG com transparência depende do canvas do navegador; JPEG
+  CMYK/grayscale é tratado como RGB; sem OCR;
 - conta, login, histórico, armazenamento de arquivos ou telemetria por arquivo.
 
-O suporte a DOCX e PDF (spikes concluídos) usa exclusivamente
-JSZip 3.10.1 (MIT, vendorizado em `public/vendor/jszip.js`) e pdf.js (Mozilla,
-Apache-2.0, vendorizado em `public/vendor/pdfjs/`, carregado sob demanda), sem
-CDN, mais as APIs nativas `DOMParser`/`XMLSerializer` do navegador; a escrita
-de PDF não depende de nenhuma biblioteca de terceiros (gerador próprio). Uma
-expansão além de TXT/Markdown/HTML/DOCX/PDF (novo formato de entrada/saída)
-exige spike técnico, fixtures licenciados, revisão de licença e atualização
-deste PRD antes de alterar a interface — ver AGENTS.md, seção "Processo para
-novos formatos ou pares de conversão".
+Toda a matriz (TXT, Markdown, HTML, DOCX, PDF, RTF, ODT, CSV, EPUB e Imagens →
+PDF) roda no navegador usando exclusivamente JSZip 3.10.1 (MIT,
+`public/vendor/jszip.js`), pdf.js (Mozilla, Apache-2.0, `public/vendor/pdfjs/`,
+sob demanda), as métricas AFM Core 14 da Adobe (`public/vendor/afm/`, só
+larguras de glifo, licença de redistribuição permissiva em
+`public/vendor/afm/LICENSE`) e as APIs nativas
+`DOMParser`/`XMLSerializer`/`CompressionStream`/`createImageBitmap`/
+`OffscreenCanvas`; sem CDN e sem nenhuma outra biblioteca de terceiros. Um novo
+formato ou par de conversão exige spike técnico, fixtures licenciados, revisão
+de licença e atualização deste PRD antes de alterar a interface — ver AGENTS.md,
+seção "Processo para novos formatos ou pares de conversão".
 
 ## 4. Privacidade e segurança
 
@@ -149,9 +200,18 @@ Não há CDN, origem externa, upload ou rota de conversão no servidor.
 ## 5. Arquitetura do repositório
 
 ```text
-src/main.ts                         interface e conversão local
+src/main.ts                         interface, fila e orquestração da conversão
+src/text-formats.ts                 TXT/Markdown/HTML (extraído para teste)
 src/docx.ts                         leitor/gravador OOXML (DOCX) via JSZip
 src/pdf.ts                          gerador PDF próprio + leitor via pdf.js
+src/rtf.ts                          leitor/gravador RTF próprio
+src/odt.ts                          leitor/gravador ODF (ODT) via JSZip
+src/csv.ts                          parser/gravador CSV/TSV (RFC 4180)
+src/epub.ts                         gravador EPUB 3 via JSZip (só saída)
+src/image.ts                        imagens -> PDF (combinar), JPEG/PNG
+src/afm-widths.ts                   larguras de glifo AFM (gerado, não editar)
+scripts/build-afm.mjs               compila public/vendor/afm/*.afm -> afm-widths.ts
+public/vendor/afm/                  métricas AFM Core 14 da Adobe (licença permissiva)
 public/index.html                   shell PWA + blocos seo-links/seo-jsonld
 public/style.css                    estilos responsivos e temas
 public/manifest.webmanifest         manifesto instalável

@@ -12,14 +12,20 @@ npm run check
 npm run build
 install -d "$STAGING/assets" "$STAGING/vendor"
 install -m 0644 public/index.html public/style.css public/manifest.webmanifest public/service-worker.js public/robots.txt public/sitemap.xml public/ads.txt "$STAGING/"
-install -m 0644 dist/main.js dist/docx.js dist/pdf.js "$STAGING/"
+JS_MODULES="main docx pdf text-formats afm-widths image csv rtf odt epub"
+for m in $JS_MODULES; do install -m 0644 "dist/$m.js" "$STAGING/"; done
 install -m 0644 public/vendor/jszip.js "$STAGING/vendor/jszip.js"
 cp -a public/vendor/pdfjs "$STAGING/vendor/pdfjs"
 cp -a public/converter "$STAGING/converter"
 install -m 0644 public/assets/appsboxconvdocslogo.png "$STAGING/assets/appsboxconvdocslogo.png"
 sed -i "s/>desenvolvimento</>$RELEASE</; s/__RELEASE__/$RELEASE/g" "$STAGING/index.html"
 sed -i "s/appsbox-conv-documentos-v2/appsbox-conv-documentos-$RELEASE/" "$STAGING/service-worker.js"
-sed -i "s/__RELEASE__/$RELEASE/g; s#from './docx.js'#from './docx.js?release=$RELEASE'#; s#from './pdf.js'#from './pdf.js?release=$RELEASE'#" "$STAGING/main.js" "$STAGING/docx.js" "$STAGING/pdf.js"
+STAGED_JS=""
+for m in $JS_MODULES; do STAGED_JS="$STAGED_JS $STAGING/$m.js"; done
+for m in $JS_MODULES; do
+  sed -i "s#from './$m.js'#from './$m.js?release=$RELEASE'#g" $STAGED_JS
+done
+sed -i "s/__RELEASE__/$RELEASE/g" $STAGED_JS
 find "$STAGING/converter" -name '*.html' -exec sed -i "s/__RELEASE__/$RELEASE/g" {} +
 sudo install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" -m 0755 "$PUBLISH/releases" "$PUBLISH/releases/$RELEASE"
 sudo cp -a "$STAGING/." "$PUBLISH/releases/$RELEASE/"

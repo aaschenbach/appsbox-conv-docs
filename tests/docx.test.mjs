@@ -60,6 +60,33 @@ test('reads lists that use ListBullet/ListNumber styles without numPr (common in
   assert.match(html, /<ol><li>Primeiro<\/li><li>Segundo<\/li><\/ol>/);
 });
 
+test('options ajustam fonte padrão, tamanho de corpo e dimensão da página', async () => {
+  const html = '<!doctype html><html><body><h1>T</h1><p>corpo</p></body></html>';
+  const bytes = await htmlToDocxBytes(html, { fontFamily: 'Georgia', baseSize: 12, pageSize: 'letter', margins: 'narrow' });
+
+  // Lê styles.xml e document.xml crus do pacote para checar o layout aplicado.
+  const zip = await JSZip.loadAsync(bytes);
+  const styles = await zip.file('word/styles.xml').async('string');
+  const doc = await zip.file('word/document.xml').async('string');
+  assert.match(styles, /w:ascii="Georgia" w:hAnsi="Georgia"/);
+  assert.match(styles, /<w:sz w:val="24"\/>/); // 12 pt = 24 meios-pontos
+  assert.match(doc, /<w:pgSz w:w="12240" w:h="15840"\/>/); // Carta
+  assert.match(doc, /<w:pgMar w:top="720"/); // margens estreitas
+
+  // Sem options, o padrão anterior (Calibri 11 / A4) é preservado.
+  const plain = await JSZip.loadAsync(await htmlToDocxBytes(html));
+  const plainStyles = await plain.file('word/styles.xml').async('string');
+  const plainDoc = await plain.file('word/document.xml').async('string');
+  assert.match(plainStyles, /w:ascii="Calibri" w:hAnsi="Calibri"/);
+  assert.match(plainStyles, /<w:sz w:val="22"\/>/);
+  assert.match(plainDoc, /<w:pgSz w:w="11906" w:h="16838"\/>/);
+
+  // Round trip continua íntegro com options custom.
+  const back = await docxToHtml(bytes);
+  assert.match(back, /<h1>T<\/h1>/);
+  assert.match(back, /<p>corpo<\/p>/);
+});
+
 test('rejects a file that is not a valid docx package', async () => {
   const notDocx = new TextEncoder().encode('não é um zip');
   await assert.rejects(() => docxToHtml(notDocx));

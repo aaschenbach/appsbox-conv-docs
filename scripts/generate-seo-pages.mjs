@@ -49,9 +49,24 @@ const FORMATS = {
   html: { label: 'HTML', long: 'HTML (.html)', ext: '.html' },
   docx: { label: 'DOCX', long: 'documento do Word (.docx)', ext: '.docx' },
   pdf: { label: 'PDF', long: 'PDF (.pdf)', ext: '.pdf' },
+  rtf: { label: 'RTF', long: 'texto formatado (RTF)', ext: '.rtf' },
+  odt: { label: 'ODT', long: 'documento ODT do LibreOffice', ext: '.odt' },
+  csv: { label: 'CSV', long: 'planilha CSV', ext: '.csv' },
+  epub: { label: 'EPUB', long: 'livro digital EPUB', ext: '.epub' },
+  jpg: { label: 'JPG', long: 'imagem JPG', ext: '.jpg' },
+  png: { label: 'PNG', long: 'imagem PNG', ext: '.png' },
 };
 
-const PAIRS = Object.keys(FORMATS).flatMap((from) => Object.keys(FORMATS).filter((to) => to !== from).map((to) => [from, to]));
+// Entradas e saídas reais da aplicação (ver src/main.ts). JPG/PNG são a mesma
+// entrada "image" e só convertem para PDF; EPUB só existe como saída.
+const INPUT_KINDS = ['txt', 'md', 'html', 'docx', 'pdf', 'rtf', 'odt', 'csv', 'jpg', 'png'];
+const OUTPUT_KINDS = ['txt', 'md', 'html', 'docx', 'pdf', 'rtf', 'odt', 'csv', 'epub'];
+function allowedPair(from, to) {
+  if (from === to) return false;
+  if (from === 'jpg' || from === 'png') return to === 'pdf';
+  return true;
+}
+const PAIRS = INPUT_KINDS.flatMap((from) => OUTPUT_KINDS.filter((to) => allowedPair(from, to)).map((to) => [from, to]));
 
 const slug = (from, to) => `${from}-para-${to}`;
 const pattern = (from, to) => `${from}2${to}`;
@@ -61,9 +76,13 @@ function escapeHtml(value) {
 }
 
 function fidelityNote(from, to) {
-  if (from === 'pdf') return '<p class="muted">O PDF de origem é lido como texto corrido (via pdf.js): títulos, tabelas, listas e links do arquivo original não são reconstruídos, só o conteúdo textual.</p>';
-  if (to === 'pdf') return '<p class="muted">O PDF gerado usa layout monoespaçado (fonte Courier, sem incorporar fontes) para paginação confiável — não é uma réplica visual do documento de origem.</p>';
-  if (from === 'docx' || to === 'docx') return '<p class="muted">Preserva títulos, negrito/itálico/sublinhado/tachado, listas, tabelas, links e acentuação; não preserva imagens, fontes ou estilos customizados.</p>';
+  if (from === 'jpg' || from === 'png') return '<p class="muted">Cada imagem entra em uma página, incorporada como está (JPEG sem recompressão). Várias imagens podem ser combinadas num único PDF, com a ordem ajustável antes de converter.</p>';
+  if (to === 'epub') return '<p class="muted">O EPUB gerado é um livro de documento único (EPUB 3), com sumário montado a partir dos títulos; não embute imagens nem divide em capítulos.</p>';
+  if (from === 'pdf') return '<p class="muted">O PDF de origem é lido via pdf.js: títulos e listas são reconstruídos pelo tamanho e pela posição do texto; tabelas e formatação inline do arquivo original não são recuperadas. Para PDF → TXT, só o texto corrido.</p>';
+  if (to === 'pdf') return '<p class="muted">O PDF gerado usa fontes proporcionais padrão (Helvetica/Times/Courier, sem incorporar fontes), com hierarquia de títulos, número de página e links clicáveis — não é uma réplica visual do documento de origem, mas é um layout tipográfico de verdade.</p>';
+  if (from === 'csv' || to === 'csv') return '<p class="muted">CSV é tratado como tabela: na leitura, a primeira linha vira cabeçalho; na escrita, só as tabelas do documento são exportadas (delimitador e aspas configuráveis).</p>';
+  if (from === 'rtf' || to === 'rtf') return '<p class="muted">RTF preserva texto, negrito/itálico/sublinhado/tachado, listas, tabelas simples e links; descarta fontes, cores, imagens e metadados.</p>';
+  if (from === 'odt' || to === 'odt' || from === 'docx' || to === 'docx') return '<p class="muted">Preserva títulos, negrito/itálico/sublinhado/tachado, listas, tabelas, links e acentuação; não preserva imagens, fontes ou estilos customizados.</p>';
   return '';
 }
 
@@ -75,7 +94,7 @@ function pagesData() {
     const description = `Converta ${a.label} para ${b.label} (${pattern(from, to)}) direto no navegador, sem upload e sem cadastro. Gratuito, privado e funciona offline após o primeiro carregamento.`;
     const url = `${BASE_URL}/converter/${slug(from, to)}/`;
     const relatedLinks = PAIRS
-      .filter(([f, t]) => f !== from || t !== to)
+      .filter(([f, t]) => (f === from || t === to) && (f !== from || t !== to))
       .map(([f, t]) => `<a href="/converter/${slug(f, t)}/">${FORMATS[f].label} → ${FORMATS[t].label} <small>(${pattern(f, t)})</small></a>`)
       .join('');
     const html = `<!doctype html>
