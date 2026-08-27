@@ -37,33 +37,33 @@
       <div id="queue" class="queue"></div>
       <form id="converter-form">
         <p class="pair-fixed" aria-label="Conversão">ODT <span aria-hidden="true">→</span> RTF</p><select id="output" hidden><option value="rtf">RTF</option></select>
-        <div class="actions"><button class="primary" type="submit">Converter</button><button id="reset" type="button" class="secondary" title="Remove os arquivos e resultados desta tela">Limpar</button><button id="open-options" type="button" class="secondary options-btn">Opções de saída…</button></div>
+        <div class="actions"><button class="primary" type="submit">Converter</button><button id="reset" type="button" class="secondary" title="Remove os arquivos e resultados desta tela">Limpar</button></div>
+
+        <details id="options-panel" class="options-panel" hidden>
+          <summary>Opções de saída</summary>
+          <div class="options-body" id="options-form">
+            <div class="options-group" data-for="pdf" hidden>
+              <p class="options-group-title">PDF</p>
+              <label>Fonte<select id="pdf-fontFamily"><option value="sans">Sans (Helvetica)</option><option value="serif">Serif (Times)</option><option value="mono">Mono (Courier)</option></select></label>
+              <label>Corpo<select id="pdf-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
+              <label>Entrelinha<select id="pdf-lineSpacing"><option value="1.2">Compacta</option><option value="1.45">Padrão</option><option value="1.7">Solta</option></select></label>
+              <label>Página<select id="pdf-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
+              <label>Margens<select id="pdf-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
+              <label class="options-check"><input type="checkbox" id="pdf-pageNumbers"> Número de página no rodapé</label>
+              <label class="options-check"><input type="checkbox" id="pdf-justify"> Justificar o texto</label>
+            </div>
+            <div class="options-group" data-for="docx" hidden>
+              <p class="options-group-title">DOCX</p>
+              <label>Fonte<select id="docx-fontFamily"><option>Calibri</option><option>Arial</option><option>Georgia</option><option>Times New Roman</option></select></label>
+              <label>Corpo<select id="docx-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
+              <label>Página<select id="docx-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
+              <label>Margens<select id="docx-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
+            </div>
+            <button type="button" id="options-reset">Restaurar padrão</button>
+          </div>
+        </details>
       </form>
 
-      <dialog id="options-dialog" class="options-dialog">
-        <form method="dialog" id="options-form">
-          <h3>Opções de saída</h3>
-          <p id="options-none" class="muted" hidden>Este formato não tem opções de layout — o resultado é texto puro.</p>
-          <div class="options-group" data-for="pdf" hidden>
-            <p class="options-group-title">PDF</p>
-            <label>Fonte<select id="pdf-fontFamily"><option value="sans">Sans (Helvetica)</option><option value="serif">Serif (Times)</option><option value="mono">Mono (Courier)</option></select></label>
-            <label>Corpo<select id="pdf-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
-            <label>Entrelinha<select id="pdf-lineSpacing"><option value="1.2">Compacta</option><option value="1.45">Padrão</option><option value="1.7">Solta</option></select></label>
-            <label>Página<select id="pdf-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
-            <label>Margens<select id="pdf-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
-            <label class="options-check"><input type="checkbox" id="pdf-pageNumbers"> Número de página no rodapé</label>
-            <label class="options-check"><input type="checkbox" id="pdf-justify"> Justificar o texto</label>
-          </div>
-          <div class="options-group" data-for="docx" hidden>
-            <p class="options-group-title">DOCX</p>
-            <label>Fonte<select id="docx-fontFamily"><option>Calibri</option><option>Arial</option><option>Georgia</option><option>Times New Roman</option></select></label>
-            <label>Corpo<select id="docx-baseSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option></select></label>
-            <label>Página<select id="docx-pageSize"><option value="a4">A4</option><option value="letter">Carta</option></select></label>
-            <label>Margens<select id="docx-margins"><option value="narrow">Estreitas</option><option value="normal">Normais</option><option value="wide">Largas</option></select></label>
-          </div>
-          <div class="options-actions"><button type="button" id="options-reset" class="secondary">Restaurar padrão</button><button type="submit" class="primary">Concluir</button></div>
-        </form>
-      </dialog>
       <p id="status" class="status" role="status" aria-live="polite">Pronto para converter.</p><div id="results" class="results" aria-live="polite"></div>
     </section>
     <section class="card">

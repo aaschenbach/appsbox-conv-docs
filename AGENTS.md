@@ -89,11 +89,11 @@ imagens, linguagem de code fence e blocos de definição.
   página. A leitura usa pdf.js para extrair texto corrido do PDF de origem;
   não reconstrói títulos, tabelas, listas ou links do PDF original.
 
-A interface tem um painel **"Opções de saída"** (`<dialog id="options-dialog">`,
-markup em `scripts/converter-widget.mjs`, estado em `main.ts`/`localStorage`):
-mostra a seção do formato de saída selecionado (só PDF e DOCX têm opções) e, para
-os formatos de texto, informa que não há o que configurar. Os defaults já são os
-recomendados.
+A interface tem um painel **"Opções de saída"** embutido (`<details id="options-panel">`
+logo abaixo da linha de botões, markup em `scripts/converter-widget.mjs`, estado em
+`main.ts`/`localStorage`): abre automaticamente quando o destino tem opções (só PDF
+e DOCX) e fica escondido para os formatos de texto. Os valores são lidos a cada
+`change` e persistidos; não há botão de confirmar. Os defaults já são os recomendados.
 
 O markup do card do conversor é **fonte única** em
 `scripts/converter-widget.mjs` (`converterCardHtml({ locked, from, to })`),

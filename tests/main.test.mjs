@@ -123,6 +123,24 @@ test('locked txt→md: converte de verdade e gera link de download', async () =>
   assert.equal(doc.querySelectorAll('#results .error').length, 0);
 });
 
+test('painel de opções: sanfona embutida abre para PDF/DOCX e some para texto', async () => {
+  const dom = await loadApp({ locked: false, from: 'txt', to: 'md' }, 'https://x.test/');
+  const doc = dom.window.document;
+  const panel = doc.querySelector('#options-panel');
+  const output = doc.querySelector('#output');
+  assert.equal(panel.hasAttribute('open') || panel.open, false, 'md: sem opções, fechado');
+  assert.equal(panel.hidden, true, 'md: escondido');
+  output.value = 'pdf';
+  output.dispatchEvent(new dom.window.Event('change'));
+  assert.equal(panel.hidden, false, 'pdf: visível');
+  assert.equal(panel.open, true, 'pdf: aberto');
+  assert.equal(doc.querySelector('.options-group[data-for="pdf"]').hidden, false);
+  assert.equal(doc.querySelector('.options-group[data-for="docx"]').hidden, true);
+  output.value = 'rtf';
+  output.dispatchEvent(new dom.window.Event('change'));
+  assert.equal(panel.hidden, true, 'rtf: volta a esconder');
+});
+
 test('locked: sem #source, #output fixo no destino, accept da origem', async () => {
   const dom = await loadApp({ locked: true, from: 'pdf', to: 'docx' }, 'https://x.test/converter/pdf-para-docx/');
   const doc = dom.window.document;

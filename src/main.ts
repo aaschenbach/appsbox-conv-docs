@@ -100,11 +100,9 @@ function saveOptions(value: OutputOptions): void {
 }
 let outputOptions = loadOptions();
 
-const optionsDialog = document.querySelector<HTMLDialogElement>('#options-dialog')!;
-const optionsForm = document.querySelector<HTMLFormElement>('#options-form')!;
-const openOptions = document.querySelector<HTMLButtonElement>('#open-options')!;
+const optionsPanel = document.querySelector<HTMLDetailsElement>('#options-panel')!;
+const optionsForm = document.querySelector<HTMLElement>('#options-form')!;
 const optionsReset = document.querySelector<HTMLButtonElement>('#options-reset')!;
-const optionsNone = document.querySelector<HTMLElement>('#options-none')!;
 const ctl = <T extends HTMLElement>(id: string): T => optionsForm.querySelector<T>(`#${id}`)!;
 
 function syncOptionsForm(): void {
@@ -143,24 +141,22 @@ function readOptionsForm(): OutputOptions {
 }
 function showRelevantOptionsGroup(): void {
   const kind = output.value;
-  let any = false;
   optionsForm.querySelectorAll<HTMLElement>('.options-group').forEach((group) => {
-    const on = group.dataset.for === kind;
-    group.hidden = !on;
-    any = any || on;
+    group.hidden = group.dataset.for !== kind;
   });
-  optionsNone.hidden = any;
 }
-function refreshOptionsButton(): void {
-  openOptions.hidden = !(output.value === 'pdf' || output.value === 'docx');
+// Sanfona embutida: visível e aberta só quando o destino tem opções (PDF/DOCX);
+// escondida (fechada) para os formatos de texto puro.
+function refreshOptionsPanel(): void {
+  const has = output.value === 'pdf' || output.value === 'docx';
+  optionsPanel.hidden = !has;
+  if (has) {
+    optionsPanel.open = true;
+    showRelevantOptionsGroup();
+    syncOptionsForm();
+  }
 }
-function openOptionsDialog(): void {
-  syncOptionsForm();
-  showRelevantOptionsGroup();
-  try { optionsDialog.showModal(); } catch { optionsDialog.setAttribute('open', ''); }
-}
-openOptions.addEventListener('click', openOptionsDialog);
-optionsForm.addEventListener('submit', () => { outputOptions = readOptionsForm(); saveOptions(outputOptions); });
+optionsForm.addEventListener('change', () => { outputOptions = readOptionsForm(); saveOptions(outputOptions); });
 optionsReset.addEventListener('click', () => {
   outputOptions = defaultOptions();
   saveOptions(outputOptions);
@@ -196,7 +192,7 @@ function applySource(next: InputKind, clearFiles: boolean): void {
   rebuildOutputOptions();
   if (clearFiles) { jobs = []; results.replaceChildren(); }
   renderQueue();
-  refreshOptionsButton();
+  refreshOptionsPanel();
   syncUrl();
 }
 if (source) {
@@ -228,7 +224,7 @@ confirmDialog?.addEventListener('close', () => {
   }
   pendingSource = null;
 });
-output.addEventListener('change', () => { refreshOptionsButton(); renderQueue(); syncUrl(); });
+output.addEventListener('change', () => { refreshOptionsPanel(); renderQueue(); syncUrl(); });
 
 function setStatus(value: string, active = false): void { statusEl.textContent = value; statusEl.classList.toggle('busy', active); }
 function escape(value: string): string { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; }
@@ -249,7 +245,7 @@ function renderQueue(): void {
     item.querySelector<HTMLButtonElement>('button')!.addEventListener('click', () => { jobs.splice(index, 1); renderQueue(); });
     queue.append(item);
   });
-  refreshOptionsButton();
+  refreshOptionsPanel();
 }
 function addFiles(files: FileList | File[]): void {
   let accepted = 0;
@@ -355,7 +351,7 @@ if (locked) {
     syncUrl();
   }
 }
-refreshOptionsButton();
+refreshOptionsPanel();
 renderQueue();
 
 if (count) {

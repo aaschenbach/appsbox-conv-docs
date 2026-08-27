@@ -125,8 +125,9 @@ Não há ZIP de resultados, histórico, edição ou processamento em paralelo.
   (`#confirm-dialog`);
 - seleção múltipla por seletor de arquivos e arrastar/soltar; remoção individual
   e limpeza da fila;
-- painel **"Opções de saída"** (só PDF e DOCX têm opções), com defaults
-  recomendados, persistido em `localStorage`;
+- painel **"Opções de saída"** embutido (`<details id="options-panel">` abaixo dos
+  botões), que abre sozinho quando o destino é PDF ou DOCX e some para os demais,
+  com defaults recomendados, persistido em `localStorage`;
 - estado de leitura, conversão, sucesso e falha por sessão;
 - tema claro/escuro persistido em `localStorage`;
 - instalação PWA quando o navegador oferecer o prompt;

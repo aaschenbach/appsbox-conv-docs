@@ -286,14 +286,18 @@ export async function htmlToPdfBytes(html: string, options?: Partial<PdfOptions>
   const ensureSpace = (height: number): void => {
     if (cursorY - height < MARGIN) { pages.push([]); cursorY = PAGE_H - MARGIN; }
   };
+  const push = (item: RenderItem): void => { pages[pages.length - 1].push(item); };
+  // Espaço vertical entre blocos. Precisa ser emitido como item para que a
+  // segunda passada (renderização) avance o mesmo tanto que a passada de
+  // layout/paginação — sem isso os blocos encostam uns nos outros.
   const emitGap = (height: number): void => {
     ensureSpace(height);
+    push({ kind: 'gap', height });
     cursorY -= height;
   };
-  const push = (item: RenderItem): void => { pages[pages.length - 1].push(item); };
 
   const headingSize = (level: number): number => BASE * [2.0, 1.55, 1.27, 1.09, 1.09, 1.09][level - 1];
-  const headingSpaceBefore = (level: number): number => [14, 12, 10, 8, 8, 8][level - 1];
+  const headingSpaceBefore = (level: number): number => [16, 14, 11, 9, 9, 9][level - 1];
 
   // Emite um bloco de texto com quebra proporcional. `indent` desloca todas as
   // linhas (recuo pendente de lista). `marker`, se dado, é desenhado em x=0 na
@@ -363,21 +367,23 @@ export async function htmlToPdfBytes(html: string, options?: Partial<PdfOptions>
       emitGap(headingSpaceBefore(block.level));
       const boldParts = block.parts.map((part) => (part.kind === 'text' ? { ...part, flags: { ...part.flags, bold: true } } : part));
       emitTextBlock(boldParts, size, headingLineHeight, { color: block.level <= 2 ? HEADING_COLOR : undefined });
-      cursorY -= 5;
+      emitGap(6);
     } else if (block.kind === 'paragraph') {
       emitTextBlock(block.parts, BASE, bodyLineHeight, { justify: opts.justify });
-      cursorY -= 7;
+      emitGap(8);
     } else if (block.kind === 'listitem') {
       const indent = measure(block.prefix, bodyAfm, BASE);
       emitTextBlock(block.parts, BASE, bodyLineHeight, { indent, marker: block.prefix });
-      cursorY -= 3;
+      emitGap(3);
     } else if (block.kind === 'table') {
       emitTable(block.rows);
       emitGap(10);
     } else if (block.kind === 'rule') {
-      ensureSpace(bodyLineHeight(BASE));
+      emitGap(6);
+      ensureSpace(4);
       push({ kind: 'rule' });
-      cursorY -= 8;
+      cursorY -= 4;
+      emitGap(10);
     }
   });
 
@@ -412,8 +418,8 @@ export async function htmlToPdfBytes(html: string, options?: Partial<PdfOptions>
     itemsOnPage.forEach((item) => {
       if (item.kind === 'gap') { y -= item.height; return; }
       if (item.kind === 'rule') {
-        content += `q 0.6 0.6 0.6 rg ${MARGIN} ${(y - 4).toFixed(2)} ${USABLE_W.toFixed(2)} 0.75 re f Q `;
-        y -= bodyLineHeight(BASE);
+        content += `q 0.6 0.6 0.6 rg ${MARGIN} ${(y - 2).toFixed(2)} ${USABLE_W.toFixed(2)} 0.75 re f Q `;
+        y -= 4;
         return;
       }
       if (item.kind === 'table-row') {
