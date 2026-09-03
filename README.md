@@ -61,6 +61,10 @@ artefatos operacionais e não são versionados.
 - domínio: `https://docs.appsbox.com.br`;
 - porta interna: `127.0.0.1:9700`.
 - DNS e HTTPS públicos validados em 18/08/2026.
+- sem `.env`: o único backend é o contador global e não tem configuração de
+  ambiente. O `appsbox-conv-documentos.service` não tem `EnvironmentFile`. Ver
+  [`vps-docs`](https://github.com/aaschenbach/vps-docs) → *Configuração e
+  segredos por sistema*.
 
 Comandos:
 
